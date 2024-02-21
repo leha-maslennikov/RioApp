@@ -1,13 +1,37 @@
 import flet as ft
+from db import dung, get_keys
+
+def user_page(page: ft.Page):
+    panel = []
+    for a, b in dung.items():
+        panel.append(
+            ft.ExpansionPanel(
+                header=ft.Row([ft.Text(b, color=ft.colors.ON_SECONDARY)]),
+                expanded=False,
+                bgcolor=ft.colors.SECONDARY
+            )
+        )
+
+    panel = ft.ExpansionPanelList(
+        expand_icon_color=ft.colors.WHITE,
+        expanded_header_padding=10,
+        divider_color=ft.colors.WHITE,
+        controls=panel
+    )
+    page.add(panel)
+
+
+def keys_table(offset = 0):
+    table = []
+    for key in get_keys(offset):
+        
+
 
 def main(page: ft.Page):
-    wv = ft.WebView(
-        "https://flet.dev",
-        expand=True,
-        on_page_started=lambda _: print("Page started"),
-        on_page_ended=lambda _: print("Page ended"),
-        on_web_resource_error=lambda e: print("Page error:", e.data),
-    )
-    page.add(wv)
+    page.theme = ft.Theme(color_scheme_seed='blue')
+    page.bgcolor = ft.colors.PRIMARY
 
-ft.app(main)
+    
+
+
+ft.app(target=main)

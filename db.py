@@ -1,8 +1,31 @@
 import sqlite3 as sq
 import datetime
+from typing import Type
 
 #print(datetime.datetime.utcfromtimestamp(1705693235))
 #print(datetime.timedelta(seconds=2147))
+
+class KeyCharacter:
+    id: int  
+    guid: int
+    name: str
+    spec_ID: int
+    ilvl: int
+    covenant_ID: int 
+    soulbind_ID: int
+class Key:
+    id:int 
+    inst: str
+    affixes: str
+    challenge_level: int
+    date: str
+    record_time: str
+    timer_level: int
+    characters: list[Type[KeyCharacter]]
+class Character:
+    guid: int
+    name: str
+    keys: list[Type[Key]]
 
 
 dung = {
@@ -98,14 +121,21 @@ def get_character_by_name(name):
         return res.fetchall() 
       
 
-def get_keys(limit, offset):
+def get_keys(offset, limit = 10):
     '''SELECT limit keys wit offset'''
     with sq.connect('data.db') as conn:
         cur = conn.cursor()
         res = cur.execute(
             f'''SELECT * FROM mythic LIMIT {offset}, {limit} '''
         )
-        return res.fetchall() 
+        keys = {}
+        key_args = 'inst Affixes ChallengeLevel Date RecordTime TimerLevel'.split()
+        for key in res.fetchall():
+            tmp = {}
+            for i in range(len(key_args)):
+                tmp[i] = 
+
+    
     
 
 def get_character_by_key(id):
@@ -116,4 +146,3 @@ def get_character_by_key(id):
             f'''SELECT * FROM mythic_guid WHERE id = {id}'''
         )
         return res.fetchall() 
-print(get_character_by_key(1))
