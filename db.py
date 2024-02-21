@@ -88,11 +88,32 @@ def add_key(key: dict):
 
 
 
-def get_character(name):
-      '''SELECT character whose nickname start with name'''
-      with sq.connect('data.db') as conn:
+def get_character_by_name(name):
+    '''SELECT character whose nickname start with name'''
+    with sq.connect('data.db') as conn:
         cur = conn.cursor()
         res = cur.execute(
             f'''SELECT guid, name FROM characters WHERE name LIKE '{name}%' '''
         )
         return res.fetchall() 
+      
+
+def get_keys(limit, offset):
+    '''SELECT limit keys wit offset'''
+    with sq.connect('data.db') as conn:
+        cur = conn.cursor()
+        res = cur.execute(
+            f'''SELECT * FROM mythic LIMIT {offset}, {limit} '''
+        )
+        return res.fetchall() 
+    
+
+def get_character_by_key(id):
+    '''SELECT characters from key with id'''
+    with sq.connect('data.db') as conn:
+        cur = conn.cursor()
+        res = cur.execute(
+            f'''SELECT * FROM mythic_guid WHERE id = {id}'''
+        )
+        return res.fetchall() 
+print(get_character_by_key(1))
