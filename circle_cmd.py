@@ -55,8 +55,7 @@ def parse():
             exit(0)
 
 
-def main():
-    ses = requests.session()
+def get_all_keys():
     ses.get(url='https://cpsl.wowcircle.me')
     ses.post(url='https://cpsl.wowcircle.me/main.php?1&serverId=null', data='[{"tid":4,"data":[{"accountName":"'+login+'","password":"'+password+'","captcha":""}],"action":"wow_Services","type":"rpc","method":"cmdLogin"}]')
     db.create()
@@ -65,7 +64,4 @@ def main():
 
 if __name__ == '__main__':
     ses = requests.session()
-    ses.get(url='https://cpsl.wowcircle.me')
-    ses.post(url='https://cpsl.wowcircle.me/main.php?1&serverId=null', data='[{"tid":4,"data":[{"accountName":"'+login+'","password":"'+password+'","captcha":""}],"action":"wow_Services","type":"rpc","method":"cmdLogin"}]')
-    db.create()
-    parse()
+    get_all_keys()
