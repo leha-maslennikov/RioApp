@@ -1,9 +1,6 @@
 import sqlite3 as sq
-import datetime
 from typing import Type
-
-#print(datetime.datetime.utcfromtimestamp(1705693235))
-#print(datetime.timedelta(seconds=2147))
+from sqliterequests import Table, Select, Insert, Where
 
 class KeyCharacter:
     id: int  
@@ -11,7 +8,6 @@ class KeyCharacter:
     name: str
     spec_id: int
     ilvl: int
-    spec_id: int 
     covenant_id: int
     soulbind_id: int
     ID = 'id'
@@ -21,6 +17,15 @@ class KeyCharacter:
     ILVL = 'Ilvl'
     COVENANT_ID = 'CovenantID'
     SOULBIND_ID = 'SoulbindID'
+    ARGS = [ID, GUID, NAME, SPEC_ID, ILVL, COVENANT_ID, SOULBIND_ID]
+
+    def __str__(self):
+        s = [self.id, self.guid, self.name, self.spec_id, self.ilvl, self.covenant_id, self.soulbind_id]
+        str = ''
+        for i in range(len(s)):
+            str += f"{self.ARGS[i]} = {s[i]}; "
+        return str
+
 
 class Key:
     id:int 
@@ -38,14 +43,30 @@ class Key:
     DATE = 'Date'
     RECORD_TIME = 'RecordTime'
     TIMER_LEVEL = 'TimerLevel'
+    ARGS = [ID, INST, AFFIXES, CHALLENGE_LEVEL, DATE, RECORD_TIME, TIMER_LEVEL]
+
+    def __str__(self):
+        s = [self.id, self.inst, self.affixes, self.challenge_level, self.date, self.record_time, self.timer_level]
+        str = ''
+        for i in range(len(s)):
+            str += f"{self.ARGS[i]} = {s[i]}; "
+        return str
 
 class Character:
     guid: int
     name: str
-    keys: list[Type[Key]]
+    keys: str
     GUID = 'guid' 
     NAME = 'name'
     KEYS = 'keys'
+    ARGS = [GUID, NAME, KEYS]
+
+    def __str__(self):
+        s = [self.guid, self.name, self.keys]
+        str = ''
+        for i in range(len(s)):
+            str += f"{self.ARGS[i]} = {s[i]}; "
+        return str
 
 
 dung = {
@@ -63,7 +84,7 @@ dung = {
 
 
 
-class MythicData:
+class MythicDataBase:
     MYTHIC = Table('mythic')
     MYTHIC_GUID = Table('mythic_guid')
     CHARACTERS = Table('characters')  
@@ -123,54 +144,95 @@ class MythicData:
         ({id}, {member['guid']}, '{member['name']}', {member['specID']}, {member['Ilvl']}, {member['CovenantID']}, {member['SoulbindID']})
         '''
         id = self.cur.execute(
-            f'''
-            INSERT INTO mythic({Key.ID},{Key.INST},{Key.AFFIXES},{Key.CHALLENGE_LEVEL},{Key.DATE},{Key.RECORD_TIME},{Key.TIMER_LEVEL}) VALUES
-            ({key.id},{key.inst},{key.affixes},{key.challenge_level},{key.date},{key.record_time},{key.timer_level})
-            '''
+            Insert(
+                self.MYTHIC, 
+                Key.ARGS,
+                [key.id, key.inst, key.affixes, key.challenge_level, key.date, key.record_time, key.timer_level]
+            ).get()
         ).lastrowid
         for member in key.characters:
-            cmd = f'''
-                INSERT INTO mythic_guid({KeyCharacter.ID}, {KeyCharacter.GUID}, {KeyCharacter.NAME}, {KeyCharacter.SPEC_ID}, {KeyCharacter.ILVL}, {KeyCharacter.COVENANT_ID}, {KeyCharacter.SOULBIND_ID}) VALUES
-                ({member.id}, {member.guid}, {member.name}, {member.spec_id}, {member.ilvl}, {member.covenant_id}, {member.soulbind_id})
-                    '''
-            self.cur.execute(cmd)
-            keys = self.cur.execute(f"SELECT {Character.KEYS} FROM characters WHERE {Character.GUID}={member.guid}").fetchone()
+            self.cur.execute(
+                Insert(
+                    self.MYTHIC_GUID, 
+                    KeyCharacter.ARGS,
+                    [member.id, member.guid, member.name, member.spec_id, member.ilvl, member.covenant_id, member.soulbind_id]
+                ).get()
+            )
+            keys = self.cur.execute(
+                Where(Select(self.CHARACTERS, [Character.KEYS]), [Character.GUID], [member.guid]).get()
+            ).fetchone()
             if keys:
                 self.cur.execute(
                     f'''UPDATE characters SET {Character.KEYS} = '{keys[0]+' '+str(id)}' WHERE {Character.guid}={member.guid}'''
                 )
             else:
                 self.cur.execute(
-                    f'''INSERT INTO characters({Character.GUID}, {Character.NAME}, {Character.KEYS}) VALUES ({member.guid}, '{member.name}', '{id}')'''
+                    Insert(
+                        self.CHARACTERS,
+                        Character.ARGS,
+                        [member.guid, member.name, id]
+                    ).get()
                 )
 
-    def get_character_by_name(self, name: str):
+    def get_character_by_name(self, name: str) -> list[Type[Character]]:
         '''SELECT character whose nickname start with name'''
         res = self.cur.execute(
-            f'''SELECT {Character.GUID}, {Character.NAME}, {Character.KEYS} FROM characters WHERE {Character.NAME} LIKE '{name}%' '''
+            Select(
+                self.CHARACTERS,
+                Character.ARGS
+            ).get() + 
+            f''' WHERE {Character.NAME} LIKE '{name}%' '''
         )
-        res = []
+        chars = []
         for i in res.fetchall():
             char = Character()
             char.guid = i[0]
             char.name = i[1]
             char.keys = i[2]
-            res.append(char)
-        return res
-    
+            chars.append(char)
+        return chars
 
-    def get_character_by_key_id(self, id):
-        '''SELECT characters from key with id'''
+    def get_character_by_guid(self, guid: int) -> Type[Character]:
+        '''SELECT character whose nickname start with name'''
         res = self.cur.execute(
-            f'''SELECT * FROM mythic_guid WHERE {KeyCharacter.ID} = {id}'''
+            Where(
+                Select(
+                    self.CHARACTERS,
+                    Character.ARGS
+                ),
+                [Character.GUID],
+                [guid]
+            ).get()
         )
-        return res.fetchall() 
-      
+        i = res.fetchone()
+        char = Character()
+        char.guid = i[0]
+        char.name = i[1]
+        char.keys = i[2]
+        return char
 
-    def get_keys(self, offset, limit = 10):
+    def get_character_by_key_id(self, id: int) -> list[Type[KeyCharacter]]:
+        '''SELECT characters from key by key id'''
+        res = self.cur.execute(
+            Where(Select(self.MYTHIC_GUID, [], True), [KeyCharacter.ID], [id]).get()
+        )
+        chars = []
+        for i in res.fetchall():
+            char = KeyCharacter()
+            char.id = i[0]
+            char.guid = i[1]
+            char.name = i[2]
+            char.spec_id = i[3]
+            char.ilvl = i[4]
+            char.covenant_id = i[5]
+            char.soulbind_id = i[6]
+            chars.append(char)
+        return chars
+
+    def get_keys(self, offset, limit = 10) -> list[Type[Key]]:
         '''SELECT limit keys wit offset'''
         res = self.cur.execute(
-            f'''SELECT * FROM mythic LIMIT {offset}, {limit} '''
+            Select(self.MYTHIC, [], True).get() + f''' LIMIT {offset}, {limit}'''
         )
         keys = []
         for i in res.fetchall():
@@ -185,3 +247,24 @@ class MythicData:
             keys.append(key)
         return keys
 
+    def get_character_keys(self, name: str = None, guid: int = None):
+        if guid:
+            cmd = Where(Select(self.CHARACTERS, [Character.KEYS]), [Character.GUID], [guid]).get()
+        if name:
+            cmd = Where(Select(self.CHARACTERS, [Character.KEYS]), [Character.NAME], [name]).get()
+        res = self.cur.execute(cmd).fetchone()[0].split()
+        keys = []
+        for i in res:
+            keys.append(self.get_keys(int(i)-1)[0])
+        return keys
+
+
+
+
+if __name__ == '__main__':
+    print('MAIN():')
+    m = MythicDataBase()
+    print('\n'.join(map(str, m.get_character_by_name(name = 'Безшуто'))))
+    print(m.get_character_by_guid(30354))
+    print('\n'.join(map(str, m.get_character_by_key_id(94))))
+    print('\n'.join(map(str, m.get_character_keys(guid=30354))))
