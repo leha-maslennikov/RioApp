@@ -4,15 +4,7 @@ from typing import Type
 
 #print(datetime.datetime.utcfromtimestamp(1705693235))
 #print(datetime.timedelta(seconds=2147))
-p = '''Key.ID
-Key.INST
-Key.AFFIXES
-Key.CHALLENGE_LEVEL
-Key.DATE
-Key.RECORD_TIME
-Key.TIMER_LEVEL'''.lower().split()
-for i in range(len(p)):
-    print(p[i], f'= i[{i}]')
+
 class KeyCharacter:
     id: int  
     guid: int
@@ -68,13 +60,13 @@ dung = {
     '2441' :	'Tazavesh the Veiled Market'
 }
 
-class Where:
-    pass
-class Request:
-    table: str
-    where: 
+
+
 
 class MythicData:
+    MYTHIC = Table('mythic')
+    MYTHIC_GUID = Table('mythic_guid')
+    CHARACTERS = Table('characters')  
 
     def __init__(self) -> None:
         self.conn = sq.connect('data.db')
