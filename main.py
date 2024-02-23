@@ -23,11 +23,9 @@ def keys_table(offset = 0):
 
 
 def main(page: ft.Page):
-    page.theme = ft.Theme(color_scheme_seed='green')
-    page.window_width = 1500
-    page.window_height = 1000
+    page.theme = ft.Theme(color_scheme_seed='green', font_family='Verdana')
     page.window_center()
-    page.window_full_screen = True
+    #page.window_full_screen = True
 
     def f(route: ft.RouteChangeEvent):
         page.views.clear()
@@ -42,9 +40,14 @@ def main(page: ft.Page):
         if len(page.view):
             top_view = page.views[-1]
             page.go(top_view.route)
+
+    def u(e: ft.ControlEvent):
+        e.route = e.page.route
+        f(e)
     page.on_route_change = f
     page.on_view_pop = p
-    page.go(f'/{pages.MAIN}')
+    page.on_resize = u
+    page.go(f'/{pages.KEY_TOP}')
 
     
 

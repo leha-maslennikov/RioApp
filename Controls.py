@@ -23,55 +23,71 @@ def get_search_bar(page: ft.Page):
 def get_menu_bar(page: ft.Page):
     def main(e: ft.ControlEvent):
         e.page.go(f'/{e.control.data}')
-
-    return ft.Container(
-        content = ft.Row(
-            controls = [
-                ft.MenuItemButton(
-                    content = ft.Text(MAIN, color=ft.colors.ON_PRIMARY_CONTAINER, weight=ft.FontWeight.BOLD),
-                    data=MAIN,
-                    on_click=main
-                ),
-                ft.MenuItemButton(
-                    content = ft.Text(KEY_TOP, color=ft.colors.ON_PRIMARY_CONTAINER),
-                    data=KEY_TOP,
-                    on_click=main
-                ),
-                ft.SubmenuButton(
-                    content = ft.Text(CHARACTER_TOP, color=ft.colors.ON_PRIMARY_CONTAINER),
-                    controls = [
-                        ft.MenuItemButton(
-                            leading=ft.Icon(ft.icons.CIRCLE_SHARP),
-                            content = ft.Text(TANK, color=ft.colors.ON_PRIMARY_CONTAINER),
-                            data=TANK,
-                            on_click=main
-                        ),
-                        ft.MenuItemButton(
-                            leading=ft.Icon(ft.icons.CIRCLE_SHARP),
-                            content = ft.Text(HEAL, color=ft.colors.ON_PRIMARY_CONTAINER),
-                            data=HEAL,
-                            on_click=main
-                        ),
-                        ft.MenuItemButton(
-                            leading=ft.Icon(ft.icons.CIRCLE_SHARP),
-                            content = ft.Text(DD, color=ft.colors.ON_PRIMARY_CONTAINER),
-                            data=DD,
-                            on_click=main
-                        )
-                    ]
-                ),
-                get_search_bar(page)
-            ],
-            expand = True
-        ),
-        bgcolor = ft.colors.PRIMARY_CONTAINER,
-        border_radius = 10
+    bar = ft.Row(
+        [
+            ft.MenuItemButton(
+                content = ft.Text(MAIN, color=ft.colors.ON_PRIMARY_CONTAINER, weight=ft.FontWeight.BOLD),
+                data=MAIN,
+                on_click=main
+            ),
+            ft.MenuItemButton(
+                content = ft.Text(KEY_TOP, color=ft.colors.ON_PRIMARY_CONTAINER, weight=ft.FontWeight.BOLD),
+                data=KEY_TOP,
+                on_click=main
+            ),
+            ft.SubmenuButton(
+                content = ft.Text(CHARACTER_TOP, color=ft.colors.ON_PRIMARY_CONTAINER, weight=ft.FontWeight.BOLD),
+                controls = [
+                    ft.MenuItemButton(
+                        leading=ft.Image(src='/img/all.png', width=25),
+                        content = ft.Text(ALL, color=ft.colors.ON_PRIMARY_CONTAINER),
+                        data=ALL,
+                        on_click=main,
+                        expand=True,
+                    ),
+                    ft.MenuItemButton(
+                        leading = ft.Image(src='/img/tank.png', width=25),
+                        content = ft.Text(TANK, color=ft.colors.ON_PRIMARY_CONTAINER),
+                        data=TANK,
+                        on_click=main
+                    ),
+                    ft.MenuItemButton(
+                        leading=ft.Image(src='/img/healer.png', width=25),
+                        content = ft.Text(HEAL, color=ft.colors.ON_PRIMARY_CONTAINER),
+                        data=HEAL,
+                        on_click=main
+                    ),
+                    ft.MenuItemButton(
+                        leading=ft.Image(src='/img/dps.png', width=25),
+                        content = ft.Text(DD, color=ft.colors.ON_PRIMARY_CONTAINER),
+                        data=DD,
+                        on_click=main
+                    )
+                ]
+            ),
+            ft.SubmenuButton(
+                content = ft.Text(CLASS_TOP, color=ft.colors.ON_PRIMARY_CONTAINER, weight=ft.FontWeight.BOLD),
+                controls = [
+                    ft.MenuItemButton(
+                        leading=ft.Image(src='/img/all.png', width=25),
+                        content = ft.Text(ALL, color=ft.colors.ON_PRIMARY_CONTAINER),
+                        data=ALL,
+                        on_click=main,
+                        expand=True
+                    )
+                ]
+            ),
+            get_search_bar(page)
+        ],
+        expand = True
     )
+
+    return ft.AppBar(title=bar, bgcolor=ft.colors.PRIMARY_CONTAINER)
 
 def get_key_row(page: ft.Page, key: Key):
     return ft.Container(
-        ft.Text(f"{'+'*key.timer_level}{key.challenge_level} {key.inst} {key.record_time}", color=ft.colors.ON_SECONDARY, size=16),
-        bgcolor = ft.colors.SECONDARY,
+        ft.Text(f"{'+'*key.timer_level}{key.challenge_level} {key.inst} {key.record_time}", color=ft.colors.ON_SECONDARY_CONTAINER, size=16),
+        bgcolor = ft.colors.SECONDARY_CONTAINER,
         border_radius=1,
         width = page.width*0.5,
         padding=5

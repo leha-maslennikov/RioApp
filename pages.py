@@ -13,14 +13,22 @@ def main(page: ft.Page) -> ft.View:
    ) 
 
 def key_top(page: ft.Page) -> ft.View:
-   controls = [get_menu_bar(page)]
+   keys = []
    for i in MDB.get_keys(limit=10).get():
-      controls.append(get_key_row(page, i))
+      keys.append(get_key_row(page, i))
    return ft.View(
       route = f'/{KEY_TOP}',
-      controls = controls,
+      controls = [
+         get_menu_bar(page), 
+         ft.Container(
+            content=ft.Row([ft.Column(keys, width=page.width)]),
+            bgcolor=ft.colors.SECONDARY,
+            expand=True
+            )
+      ],
       bgcolor = ft.colors.PRIMARY
    )
 
 if __name__ == '__main__':
-   print('\n'.join(map(str, MDB.get_keys(10, limit=10).get())))
+   #print('\n'.join(map(str, MDB.get_keys(10, limit=10).get())))
+   pass
