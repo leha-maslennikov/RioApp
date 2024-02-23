@@ -13,19 +13,30 @@ def main(page: ft.Page) -> ft.View:
    ) 
 
 def key_top(page: ft.Page) -> ft.View:
-   keys = []
+   panel = ft.ExpansionPanelList(
+        expand_icon_color=ft.colors.ON_SECONDARY_CONTAINER,
+        divider_color=ft.colors.SECONDARY,
+        controls=[]
+   )
    for i in MDB.get_keys(limit=10).get():
-      keys.append(get_key_row(page, i))
+      panel.controls.append(get_key_row(page, i))
+   controls = [
+      get_menu_bar(page),
+      ft.Container(
+         ft.Column(
+            [
+               ft.Row(
+                  [get_key_block(ft.Text(i, color=ft.colors.ON_SECONDARY_CONTAINER, size=16)) for i in 'Rank	Dungeon	Level	Time	Affixes	Tank	Healer	DPS	Score'.split()]
+               ),
+               panel
+            ]
+         ),
+         bgcolor=ft.colors.SECONDARY
+      )
+   ]
    return ft.View(
       route = f'/{KEY_TOP}',
-      controls = [
-         get_menu_bar(page), 
-         ft.Container(
-            content=ft.Row([ft.Column(keys, width=page.width)]),
-            bgcolor=ft.colors.SECONDARY,
-            expand=True
-            )
-      ],
+      controls = controls,
       bgcolor = ft.colors.PRIMARY
    )
 

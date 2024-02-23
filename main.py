@@ -24,8 +24,8 @@ def keys_table(offset = 0):
 
 def main(page: ft.Page):
     page.theme = ft.Theme(color_scheme_seed='green', font_family='Verdana')
-    page.window_center()
-    #page.window_full_screen = True
+    #page.window_center()
+    page.window_full_screen = True
 
     def f(route: ft.RouteChangeEvent):
         page.views.clear()

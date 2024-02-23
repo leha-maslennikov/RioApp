@@ -84,11 +84,26 @@ def get_menu_bar(page: ft.Page):
 
     return ft.AppBar(title=bar, bgcolor=ft.colors.PRIMARY_CONTAINER)
 
-def get_key_row(page: ft.Page, key: Key):
+def get_key_block(content: ft.Control):
     return ft.Container(
-        ft.Text(f"{'+'*key.timer_level}{key.challenge_level} {key.inst} {key.record_time}", color=ft.colors.ON_SECONDARY_CONTAINER, size=16),
-        bgcolor = ft.colors.SECONDARY_CONTAINER,
-        border_radius=1,
-        width = page.width*0.5,
-        padding=5
+        content=content,
+        width=150,
+        alignment=ft.alignment.center_left,
+        padding=10
     )
+
+def get_key_row(page: ft.Page, key: Key):
+    row = ft.Row()
+    for i in key.id, key.inst, f'{key.challenge_level}{key.timer_level*"+"}', key.record_time, key.affixes:
+        row.controls.append(
+            get_key_block(
+                ft.Text(
+                    i, color=ft.colors.ON_SECONDARY_CONTAINER, size=16
+                )
+            )
+        )
+    return ft.ExpansionPanel(
+                header=row,
+                bgcolor=ft.colors.SECONDARY_CONTAINER,
+                expanded=False,
+            )
