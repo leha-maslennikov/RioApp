@@ -1,6 +1,9 @@
+from threading import Thread
+from queue import Queue, Empty
 import sqlite3 as sq
 from typing import Type
 from sqliterequests import Table, Select, Insert, Where
+from time import sleep
 
 class KeyCharacter:
     id: int  
@@ -25,7 +28,6 @@ class KeyCharacter:
         for i in range(len(s)):
             str += f"{self.ARGS[i]} = {s[i]}; "
         return str
-
 
 class Key:
     id:int 
@@ -81,13 +83,10 @@ dung = {
     '2441' :	'Tazavesh the Veiled Market'
 }
 
-
-
-
 class MythicDataBase:
     MYTHIC = Table('mythic')
     MYTHIC_GUID = Table('mythic_guid')
-    CHARACTERS = Table('characters')  
+    CHARACTERS = Table('characters')
 
     def __init__(self) -> None:
         self.conn = sq.connect('data.db')
@@ -229,7 +228,7 @@ class MythicDataBase:
             chars.append(char)
         return chars
 
-    def get_keys(self, offset, limit = 10) -> list[Type[Key]]:
+    def get_keys(self, offset: int = 0, limit: int = 10) -> list[Type[Key]]:
         '''SELECT limit keys wit offset'''
         res = self.cur.execute(
             Select(self.MYTHIC, [], True).get() + f''' LIMIT {offset}, {limit}'''
@@ -258,13 +257,54 @@ class MythicDataBase:
             keys.append(self.get_keys(int(i)-1)[0])
         return keys
 
+class AsyncMythicDataBase:
+    queue: Queue
+    MDB: MythicDataBase
+    MYTHIC = Table('mythic')
+    MYTHIC_GUID = Table('mythic_guid')
+    CHARACTERS = Table('characters')
 
+    class Result:
+        result = None
 
+        def put(self, result):
+            self.result = result
+
+        def get(self):
+            while not self.result:
+                pass
+            return self.result
+
+    def __init__(self) -> None:
+        def init(queue: Queue):
+            self.MDB = MythicDataBase()
+            while True:
+                try:
+                    req = queue.get()
+                except Empty:
+                    continue
+                else:
+                    req[2].put(req[0](*req[1]))
+                    queue.task_done()
+        self.queue = Queue()
+        Thread(target = init, args = (self.queue,), daemon = True).start()
+        sleep(1)
+
+    def add_key(self, key: Key) -> None:
+        self.queue.put((self.MDB.add_key, (key,)))
+
+    def get_keys(self, offset: int = 0, limit: int = 10) -> list[Key]:
+        '''SELECT limit keys wit offset'''
+        res = self.Result()
+        self.queue.put((self.MDB.get_keys, (offset, limit), res))
+        return res
+
+MDB = AsyncMythicDataBase()
 
 if __name__ == '__main__':
     print('MAIN():')
-    m = MythicDataBase()
-    print('\n'.join(map(str, m.get_character_by_name(name = 'Безшуто'))))
-    print(m.get_character_by_guid(30354))
-    print('\n'.join(map(str, m.get_character_by_key_id(94))))
-    print('\n'.join(map(str, m.get_character_keys(guid=30354))))
+    a = AsyncMythicDataBase()
+    #a.add_key(Key())
+    res = a.get_keys()
+    print(res)
+    print(list(map(str, res.get())))
