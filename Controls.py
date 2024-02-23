@@ -32,7 +32,7 @@ def get_menu_bar(page: ft.Page):
             ),
             ft.MenuItemButton(
                 content = ft.Text(KEY_TOP, color=ft.colors.ON_PRIMARY_CONTAINER, weight=ft.FontWeight.BOLD),
-                data=KEY_TOP,
+                data=f'{KEY_TOP}/:0',
                 on_click=main
             ),
             ft.SubmenuButton(

@@ -12,26 +12,35 @@ def main(page: ft.Page) -> ft.View:
       bgcolor = ft.colors.PRIMARY
    ) 
 
-def key_top(page: ft.Page) -> ft.View:
-   panel = ft.ExpansionPanelList(
+def key_top(page: ft.Page, offset: int) -> ft.View:
+   def f(e: ft.ScrollEvent):
+      print(e)
+   btn = ft.IconButton(icon = ft.icons.CHEVRON_LEFT, bgcolor=ft.colors.SECONDARY_CONTAINER)
+   keys = ft.ExpansionPanelList(
         expand_icon_color=ft.colors.ON_SECONDARY_CONTAINER,
         divider_color=ft.colors.SECONDARY,
         controls=[]
    )
-   for i in MDB.get_keys(limit=10).get():
-      panel.controls.append(get_key_row(page, i))
+   for i in MDB.get_keys(offset=offset, limit=10).get():
+      keys.controls.append(get_key_row(page, i))
    controls = [
       get_menu_bar(page),
+      btn,
       ft.Container(
          ft.Column(
             [
                ft.Row(
-                  [get_key_block(ft.Text(i, color=ft.colors.ON_SECONDARY_CONTAINER, size=16)) for i in 'Rank	Dungeon	Level	Time	Affixes	Tank	Healer	DPS	Score'.split()]
+                  [get_key_block(ft.Text(i, color=ft.colors.ON_SECONDARY, size=16)) for i in 'Rank	Dungeon	Level	Time	Affixes	Tank	Healer	DPS	Score'.split()]
                ),
-               panel
-            ]
+               keys,
+               keys
+            ],
+            scroll=ft.ScrollMode.ALWAYS,
+            on_scroll_interval=0,
+            on_scroll=f
          ),
-         bgcolor=ft.colors.SECONDARY
+         bgcolor=ft.colors.SECONDARY,
+         border_radius=10
       )
    ]
    return ft.View(

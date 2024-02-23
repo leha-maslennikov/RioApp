@@ -25,14 +25,15 @@ def keys_table(offset = 0):
 def main(page: ft.Page):
     page.theme = ft.Theme(color_scheme_seed='green', font_family='Verdana')
     #page.window_center()
-    page.window_full_screen = True
+    #page.window_full_screen = True
 
     def f(route: ft.RouteChangeEvent):
         page.views.clear()
-        if route.route == f'/{pages.MAIN}':
+        tr = ft.TemplateRoute(route.route)
+        if tr.route == f'/{pages.MAIN}':
             route.page.views.append(pages.main(page))
-        elif route.route == f'/{pages.KEY_TOP}':
-            route.page.views.append(pages.key_top(page))
+        elif tr.match(f'/{pages.KEY_TOP}/:offset'):
+            route.page.views.append(pages.key_top(page, int(tr.offset[1:])))
         route.page.update()
 
     def p(view: ft.View):
@@ -47,7 +48,7 @@ def main(page: ft.Page):
     page.on_route_change = f
     page.on_view_pop = p
     page.on_resize = u
-    page.go(f'/{pages.KEY_TOP}')
+    page.go(f'/{pages.KEY_TOP}/:0')
 
     
 
