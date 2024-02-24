@@ -1,29 +1,9 @@
 import flet as ft
 import pages
 
-def user_page(page: ft.Page):
-    panel = []
-    
-
-    panel = ft.ExpansionPanelList(
-        expand_icon_color=ft.colors.WHITE,
-        expanded_header_padding=10,
-        divider_color=ft.colors.WHITE,
-        controls=panel
-    )
-    page.add(panel)
-    page.theme_mode = ft.ThemeMode.LIGHT
-
-    
-
-
-def keys_table(offset = 0):
-    table = []
-        
-
 
 def main(page: ft.Page):
-    page.theme = ft.Theme(color_scheme_seed='green', font_family='Verdana')
+    page.theme = ft.Theme(color_scheme_seed='blue', font_family='Verdana')
     #page.window_center()
     #page.window_full_screen = True
 

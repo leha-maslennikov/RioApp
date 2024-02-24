@@ -104,6 +104,5 @@ def get_key_row(page: ft.Page, key: Key):
         )
     return ft.ExpansionPanel(
                 header=row,
-                bgcolor=ft.colors.SECONDARY_CONTAINER,
-                expanded=False,
+                bgcolor=ft.colors.SECONDARY_CONTAINER
             )

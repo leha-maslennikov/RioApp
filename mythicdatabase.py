@@ -91,6 +91,7 @@ class MythicDataBase:
     def __init__(self) -> None:
         self.conn = sq.connect('data.db')
         self.cur = self.conn.cursor()
+        self._size = self.cur.execute(f'SELECT COUNT(*) FROM {MythicDataBase.MYTHIC.name}').fetchone()[0]
 
     def __del__(self) -> None:
         self.cur.close()
@@ -172,6 +173,7 @@ class MythicDataBase:
                         [member.guid, member.name, id]
                     ).get()
                 )
+        self.size+=1
 
     def get_character_by_name(self, name: str) -> list[Type[Character]]:
         '''SELECT character whose nickname start with name'''
@@ -256,7 +258,9 @@ class MythicDataBase:
         for i in res:
             keys.append(self.get_keys(int(i)-1)[0])
         return keys
-
+    
+    def size(self) -> int:
+        return self._size
 class AsyncMythicDataBase:
     queue: Queue
     MDB: MythicDataBase
@@ -298,13 +302,13 @@ class AsyncMythicDataBase:
         res = self.Result()
         self.queue.put((self.MDB.get_keys, (offset, limit), res))
         return res
+    
+    def size(self) -> int:
+        res = self.Result()
+        self.queue.put((self.MDB.size, (), res))
+        return res
 
 MDB = AsyncMythicDataBase()
 
 if __name__ == '__main__':
     print('MAIN():')
-    a = AsyncMythicDataBase()
-    #a.add_key(Key())
-    res = a.get_keys()
-    print(res)
-    print(list(map(str, res.get())))

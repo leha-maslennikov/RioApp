@@ -13,9 +13,16 @@ def main(page: ft.Page) -> ft.View:
    ) 
 
 def key_top(page: ft.Page, offset: int) -> ft.View:
-   def f(e: ft.ScrollEvent):
-      print(e)
-   btn = ft.IconButton(icon = ft.icons.CHEVRON_LEFT, bgcolor=ft.colors.SECONDARY_CONTAINER)
+   def click(e: ft.ControlEvent):
+      e.page.go(f'/{KEY_TOP}/:{e.control.data}')
+
+   size = MDB.size()
+   btns = [
+      (ft.icons.KEYBOARD_DOUBLE_ARROW_LEFT, True if offset == 0 else False, 0),
+      (ft.icons.CHEVRON_LEFT, True if offset == 0 else False, max(0, offset - 10)),
+      (ft.icons.CHEVRON_RIGHT, False if size.get() - offset - 10 > 0 else True, offset+10),
+      (ft.icons.KEYBOARD_DOUBLE_ARROW_RIGHT, False if size.get() - offset - 10 > 0 else True, size.get()-10)]
+   btns = [ft.IconButton(icon = icon, bgcolor=ft.colors.PRIMARY_CONTAINER, icon_color=ft.colors.ON_PRIMARY_CONTAINER, disabled=dis, data=offset, on_click=click) for icon, dis, offset in btns]
    keys = ft.ExpansionPanelList(
         expand_icon_color=ft.colors.ON_SECONDARY_CONTAINER,
         divider_color=ft.colors.SECONDARY,
@@ -25,19 +32,12 @@ def key_top(page: ft.Page, offset: int) -> ft.View:
       keys.controls.append(get_key_row(page, i))
    controls = [
       get_menu_bar(page),
-      btn,
+      ft.Row(btns),
       ft.Container(
-         ft.Column(
-            [
-               ft.Row(
-                  [get_key_block(ft.Text(i, color=ft.colors.ON_SECONDARY, size=16)) for i in 'Rank	Dungeon	Level	Time	Affixes	Tank	Healer	DPS	Score'.split()]
-               ),
-               keys,
-               keys
-            ],
-            scroll=ft.ScrollMode.ALWAYS,
-            on_scroll_interval=0,
-            on_scroll=f
+         ft.Column([
+               ft.Row([get_key_block(ft.Text(i, color=ft.colors.ON_SECONDARY, size=16)) for i in 'Rank	Dungeon	Level	Time	Affixes	Tank	Healer	DPS	Score'.split()]),
+               ft.Column([keys], height=page.height-200,scroll=ft.ScrollMode.ADAPTIVE)
+            ]
          ),
          bgcolor=ft.colors.SECONDARY,
          border_radius=10
