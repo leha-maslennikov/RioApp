@@ -301,6 +301,11 @@ class AsyncMythicDataBase:
     def add_key(self, key: Key) -> None:
         self.queue.put((self.MDB.add_key, (key,)))
 
+    def get_character_by_name(self, name: str) -> list[Type[Character]]:
+        res = self.Result()
+        self.queue.put((self.MDB.get_character_by_name, (name,), res))
+        return res
+
     def get_keys(self, offset: int = 0, limit: int = 10, column: list[str] = [Key.ID], reverse: list[bool] = [False]) -> list[Key]:
         '''SELECT limit keys wit offset'''
         res = self.Result()
@@ -317,4 +322,4 @@ MDB = AsyncMythicDataBase()
 if __name__ == '__main__':
     print('MAIN():')
     #print(' '.join(map(str, MDB.get_keys(0, column=[Key.Da]).get())))
-    sleep(20)
+    sleep(3)
