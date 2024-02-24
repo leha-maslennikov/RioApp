@@ -1,39 +1,68 @@
 import flet as ft
 from Text import *
-from mythicdatabase import Key, MDB
+from mythicdatabase import Key, MDB, Character
+from threading import Thread, Lock
 
+lock = Lock()
+
+def go_char_page(e: ft.ControlEvent):
+    e.page.go(f'/{CHARACTER_PAGE}/{e.control.data}')
+    
 
 def get_search_bar(page: ft.Page):
+    def listen(page: ft.Page, e: ft.SearchBar):
+        v = page.views[-1]
+        name = e.value
+        while (len(page.views) != 0) and (v == page.views[-1]):
+            if name != e.value:
+                name = e.value
+                chars = []
+                if len(name) != 0:
+                    chars = MDB.get_character_by_name(name[0]).get()
+                e.controls[0].controls = [ft.ListTile(title=ft.Text(i.name), data = i.guid, on_click = go_char_page) for i in chars]
+                e.controls[0].update()
+            else:
+                from time import sleep
+                sleep(0.1)
+        lock.release()
+
+    def start_listen(e: ft.ControlEvent):
+        if not lock.locked():
+            lock.acquire()
+            Thread(target=listen, args=(e.page, e.control), daemon=True).start()
+    
     return ft.Container(
-        content = ft.SearchBar(
-            view_leading=ft.Icon(ft.icons.SEARCH),
-            bar_leading= ft.Icon(ft.icons.SEARCH),
-            divider_color=ft.colors.AMBER,
+        ft.SearchBar(
+            view_leading = ft.Icon(ft.icons.SEARCH),
+            bar_leading = ft.Icon(ft.icons.SEARCH),
+            divider_color=ft.colors.ON_PRIMARY_CONTAINER,
             bar_hint_text=FIND,
             view_hint_text=FIND,
             width=page.width*0.25,
             height=page.width*0.03,
-            scale=0.9
+            on_change=lambda e: e.control.open_view(),
+            on_tap=start_listen,
+            controls=[ft.Column()]
         ),
-        alignment=ft.alignment.center_right,
         expand=True,
         padding=5,
+        alignment=ft.alignment.center_right
     )
 
 def get_menu_bar(page: ft.Page):
-    def main(e: ft.ControlEvent):
+    def go_to_page(e: ft.ControlEvent):
         e.page.go(f'/{e.control.data}')
     bar = ft.Row(
         [
             ft.MenuItemButton(
                 content = ft.Text(MAIN, color=ft.colors.ON_PRIMARY_CONTAINER, weight=ft.FontWeight.BOLD),
-                data=MAIN,
-                on_click=main
+                data=f'{MAIN}/0',
+                on_click=go_to_page
             ),
             ft.MenuItemButton(
                 content = ft.Text(KEY_TOP, color=ft.colors.ON_PRIMARY_CONTAINER, weight=ft.FontWeight.BOLD),
-                data=KEY_TOP,
-                on_click=main
+                data=f'{KEY_TOP}/0',
+                on_click=go_to_page
             ),
             ft.SubmenuButton(
                 content = ft.Text(CHARACTER_TOP, color=ft.colors.ON_PRIMARY_CONTAINER, weight=ft.FontWeight.BOLD),
@@ -42,26 +71,26 @@ def get_menu_bar(page: ft.Page):
                         leading=ft.Image(src='/img/all.png', width=25),
                         content = ft.Text(ALL, color=ft.colors.ON_PRIMARY_CONTAINER),
                         data=ALL,
-                        on_click=main,
+                        on_click=go_to_page,
                         expand=True,
                     ),
                     ft.MenuItemButton(
                         leading = ft.Image(src='/img/tank.png', width=25),
                         content = ft.Text(TANK, color=ft.colors.ON_PRIMARY_CONTAINER),
                         data=TANK,
-                        on_click=main
+                        on_click=go_to_page
                     ),
                     ft.MenuItemButton(
                         leading=ft.Image(src='/img/healer.png', width=25),
                         content = ft.Text(HEAL, color=ft.colors.ON_PRIMARY_CONTAINER),
                         data=HEAL,
-                        on_click=main
+                        on_click=go_to_page
                     ),
                     ft.MenuItemButton(
                         leading=ft.Image(src='/img/dps.png', width=25),
                         content = ft.Text(DD, color=ft.colors.ON_PRIMARY_CONTAINER),
                         data=DD,
-                        on_click=main
+                        on_click=go_to_page
                     )
                 ]
             ),
@@ -72,7 +101,7 @@ def get_menu_bar(page: ft.Page):
                         leading=ft.Image(src='/img/all.png', width=25),
                         content = ft.Text(ALL, color=ft.colors.ON_PRIMARY_CONTAINER),
                         data=ALL,
-                        on_click=main,
+                        on_click=go_to_page,
                         expand=True
                     )
                 ]
@@ -109,8 +138,7 @@ def get_key_row(page: ft.Page, key: Key):
 
 def get_keys_table(page: ft.Page, offset: int, column: list[str], reverse: list[bool]):
     def click(e: ft.ControlEvent):
-        e.page.views[-1].controls = get_keys_table(e.page, e.control.data, column=column, reverse=reverse)
-        e.page.update()
+        page.go(f"/{''.join(e.page.views[-1].route.split('/')[:-1])}/{e.control.data}")
 
     size = MDB.size()
     btns = [

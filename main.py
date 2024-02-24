@@ -1,34 +1,38 @@
 import flet as ft
 import pages
 
-
 def main(page: ft.Page):
     page.theme = ft.Theme(color_scheme_seed='blue', font_family='Verdana')
     #page.window_center()
     #page.window_full_screen = True
 
     def f(route: ft.RouteChangeEvent):
-        page.views.clear()
         tr = ft.TemplateRoute(route.route)
-        if tr.match(f'/{pages.MAIN}'):
-            route.page.views.append(pages.main(page, 0))
-        elif tr.match(f'/{pages.KEY_TOP}'):
-            route.page.views.append(pages.key_top(page, 0))
-        route.page.update()
+        if tr.match(f'/{pages.MAIN}/:offset'):
+            page.views.clear()
+            route.page.views.append(pages.main(page, int(tr.offset)))
+        elif tr.match(f'/{pages.KEY_TOP}/:offset'):
+            page.views.clear()
+            route.page.views.append(pages.key_top(page, int(tr.offset)))
+        elif tr.match(f'/{pages.CHARACTER_PAGE}/:guid'):
+            route.page.views.append(pages.character_page(page, int(tr.guid)))
 
-    def p(view: ft.View):
+    def p(view: ft.ViewPopEvent):
+        page = view.page
         page.views.pop()
-        if len(page.view):
-            top_view = page.views[-1]
-            page.go(top_view.route)
+        if len(page.views) != 0:
+            page.clean()
+            page.go(page.views[-1].route)
 
     def u(e: ft.ControlEvent):
-        e.route = e.page.route
-        f(e)
+        e.page.clean()
+        e.page.go(e.page.route)
+
     page.on_route_change = f
-    page.on_view_pop = p
     page.on_resize = u
-    page.go(f'/{pages.KEY_TOP}')
+    page.on_view_pop = p
+    page.go(f'/{pages.KEY_TOP}/0')
+
 
     
 
