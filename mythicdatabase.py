@@ -2,7 +2,7 @@ from threading import Thread
 from queue import Queue, Empty
 import sqlite3 as sq
 from typing import Type
-from sqliterequests import Table, Select, Insert, Where
+from sqliterequests import *
 from time import sleep
 
 class KeyCharacter:
@@ -230,10 +230,14 @@ class MythicDataBase:
             chars.append(char)
         return chars
 
-    def get_keys(self, offset: int = 0, limit: int = 10) -> list[Type[Key]]:
-        '''SELECT limit keys wit offset'''
+    def get_keys(self, offset: int = 0, limit: int = 10, column: list[str] = [Key.ID], reverse: list[bool] = [False]) -> list[Type[Key]]:
+        '''SELECT limit keys with offset Sorted by column with [reverse] order'''
         res = self.cur.execute(
-            Select(self.MYTHIC, [], True).get() + f''' LIMIT {offset}, {limit}'''
+            Order(
+                Select(self.MYTHIC, [], True),
+                column,
+                reverse
+            ).get() + f''' LIMIT {offset}, {limit}'''
         )
         keys = []
         for i in res.fetchall():
@@ -297,10 +301,10 @@ class AsyncMythicDataBase:
     def add_key(self, key: Key) -> None:
         self.queue.put((self.MDB.add_key, (key,)))
 
-    def get_keys(self, offset: int = 0, limit: int = 10) -> list[Key]:
+    def get_keys(self, offset: int = 0, limit: int = 10, column: list[str] = [Key.ID], reverse: list[bool] = [False]) -> list[Key]:
         '''SELECT limit keys wit offset'''
         res = self.Result()
-        self.queue.put((self.MDB.get_keys, (offset, limit), res))
+        self.queue.put((self.MDB.get_keys, (offset, limit, column, reverse), res))
         return res
     
     def size(self) -> int:
@@ -312,3 +316,5 @@ MDB = AsyncMythicDataBase()
 
 if __name__ == '__main__':
     print('MAIN():')
+    #print(' '.join(map(str, MDB.get_keys(0, column=[Key.Da]).get())))
+    sleep(20)
