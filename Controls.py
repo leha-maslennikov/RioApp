@@ -1,6 +1,6 @@
 import flet as ft
 from Text import *
-from mythicdatabase import Key
+from mythicdatabase import Key, MDB
 
 
 def get_search_bar(page: ft.Page):
@@ -32,7 +32,7 @@ def get_menu_bar(page: ft.Page):
             ),
             ft.MenuItemButton(
                 content = ft.Text(KEY_TOP, color=ft.colors.ON_PRIMARY_CONTAINER, weight=ft.FontWeight.BOLD),
-                data=f'{KEY_TOP}/:0',
+                data=KEY_TOP,
                 on_click=main
             ),
             ft.SubmenuButton(
@@ -106,3 +106,39 @@ def get_key_row(page: ft.Page, key: Key):
                 header=row,
                 bgcolor=ft.colors.SECONDARY_CONTAINER
             )
+
+def get_keys_table(page: ft.Page, offset: int, column: list[str], reverse: list[bool]):
+    def click(e: ft.ControlEvent):
+        e.page.views[-1].controls = get_keys_table(e.page, e.control.data, column=column, reverse=reverse)
+        e.page.update()
+
+    size = MDB.size()
+    btns = [
+        (ft.icons.KEYBOARD_DOUBLE_ARROW_LEFT, True if offset == 0 else False, 0),
+        (ft.icons.CHEVRON_LEFT, True if offset == 0 else False, max(0, offset - 10)),
+        (ft.icons.CHEVRON_RIGHT, False if size.get() - offset - 10 > 0 else True, offset+10),
+        (ft.icons.KEYBOARD_DOUBLE_ARROW_RIGHT, False if size.get() - offset - 10 > 0 else True, size.get()-10)
+    ]
+    btns = [ft.IconButton(icon = icon, bgcolor=ft.colors.PRIMARY_CONTAINER, icon_color=ft.colors.ON_PRIMARY_CONTAINER, disabled=dis, data=offset, on_click=click) for icon, dis, offset in btns]
+    keys = ft.ExpansionPanelList(
+        expand_icon_color=ft.colors.ON_SECONDARY_CONTAINER,
+        divider_color=ft.colors.SECONDARY,
+        controls=[]
+    )
+    for i in MDB.get_keys(offset=offset, limit=10, column=column, reverse=reverse).get():
+        keys.controls.append(get_key_row(page, i))
+    controls = [
+        ft.Row(btns),
+        ft.Container(
+            ft.Column(
+                [
+                    ft.Row([get_key_block(ft.Text(i, color=ft.colors.ON_SECONDARY, size=16)) for i in 'Rank	Dungeon	Level	Time	Affixes	Tank	Healer	DPS	Score'.split()]),
+                    ft.Column([keys], height=page.height-200,scroll=ft.ScrollMode.ADAPTIVE)
+                ]
+            ),
+            bgcolor=ft.colors.SECONDARY,
+            border_radius=10
+        )
+    ]
+
+    return controls

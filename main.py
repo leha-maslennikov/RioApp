@@ -10,10 +10,10 @@ def main(page: ft.Page):
     def f(route: ft.RouteChangeEvent):
         page.views.clear()
         tr = ft.TemplateRoute(route.route)
-        if tr.route == f'/{pages.MAIN}':
-            route.page.views.append(pages.main(page))
-        elif tr.match(f'/{pages.KEY_TOP}/:offset'):
-            route.page.views.append(pages.key_top(page, int(tr.offset[1:])))
+        if tr.match(f'/{pages.MAIN}'):
+            route.page.views.append(pages.main(page, 0))
+        elif tr.match(f'/{pages.KEY_TOP}'):
+            route.page.views.append(pages.key_top(page, 0))
         route.page.update()
 
     def p(view: ft.View):
@@ -28,7 +28,7 @@ def main(page: ft.Page):
     page.on_route_change = f
     page.on_view_pop = p
     page.on_resize = u
-    page.go(f'/{pages.KEY_TOP}/:0')
+    page.go(f'/{pages.KEY_TOP}')
 
     
 
