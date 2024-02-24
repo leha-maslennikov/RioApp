@@ -47,7 +47,7 @@ class Where(Request):
 class Order(Request):
     
     def __init__(self, request: Request, column: list[str], reverse: list[bool]) -> None:
-        args = ', '.join([f"{column[i]} {'DESC' if reverse[i] else 'ASC'}" for i in range(column)])
+        args = ', '.join([f"{column[i]} {'DESC' if reverse[i] else 'ASC'}" for i in range(len(column))])
         self.cmd = f'{request.get()} ORDER BY {args}'
 
     def get(self) -> str:
