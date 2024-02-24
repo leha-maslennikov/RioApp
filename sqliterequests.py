@@ -37,9 +37,18 @@ class Select(Request):
 
 class Where(Request):
 
-    def __init__(self, request: Type[Request], args: list[str], values: list) -> None:
+    def __init__(self, request: Request, args: list[str], values: list) -> None:
         args = ', '.join([f"{args[i]} = '{values[i]}'" if type(values[i]) == str else f"{args[i]} = {values[i]}" for i in range(len(args))])
         self.cmd = f'''{request.get()} WHERE {args}'''
+
+    def get(self) -> str:
+        return self.cmd
+    
+class Order(Request):
+    
+    def __init__(self, request: Request, column: list[str], reverse: list[bool]) -> None:
+        args = ', '.join([f"{column[i]} {'DESC' if reverse[i] else 'ASC'}" for i in range(column)])
+        self.cmd = f'{request.get()} ORDER BY {args}'
 
     def get(self) -> str:
         return self.cmd
