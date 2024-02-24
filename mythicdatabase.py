@@ -273,13 +273,15 @@ class AsyncMythicDataBase:
     CHARACTERS = Table('characters')
 
     class Result:
+        have_result = False
         result = None
 
         def put(self, result):
+            self.have_result = True
             self.result = result
 
         def get(self):
-            while not self.result:
+            while not self.have_result:
                 pass
             return self.result
 
