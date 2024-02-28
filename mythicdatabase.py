@@ -138,11 +138,8 @@ class MythicDataBase:
             )'''
         )
 
-    def add_key(self, key: Type[Key]):
-        '''key json added in db
-        old:('{dung[key['MapID']]}', '{key['Affixes']}', {key['ChallengeLevel']}, '{datetime.datetime.utcfromtimestamp(int(key['Date']))}', '{datetime.timedelta(seconds=int(key['RecordTime']))}', {key['TimerLevel']})
-        ({id}, {member['guid']}, '{member['name']}', {member['specID']}, {member['Ilvl']}, {member['CovenantID']}, {member['SoulbindID']})
-        '''
+    def add_key(self, key: Key) -> None:
+        '''add key to MYTHIC table'''
         id = self.cur.execute(
             Insert(
                 self.MYTHIC, 
@@ -173,9 +170,9 @@ class MythicDataBase:
                         [member.guid, member.name, id]
                     ).get()
                 )
-        self.size+=1
+        self._size+=1
 
-    def get_character_by_name(self, name: str) -> list[Type[Character]]:
+    def get_character_by_name(self, name: str) -> list[Character]:
         '''SELECT character whose nickname start with name'''
         res = self.cur.execute(
             Select(
@@ -193,7 +190,7 @@ class MythicDataBase:
             chars.append(char)
         return chars
 
-    def get_character_by_guid(self, guid: int) -> Type[Character]:
+    def get_character_by_guid(self, guid: int) -> Character:
         '''SELECT character whose nickname start with name'''
         res = self.cur.execute(
             Where(
@@ -212,7 +209,7 @@ class MythicDataBase:
         char.keys = i[2]
         return char
 
-    def get_character_by_key_id(self, id: int) -> list[Type[KeyCharacter]]:
+    def get_characters_by_key_id(self, id: int) -> list[KeyCharacter]:
         '''SELECT characters from key by key id'''
         res = self.cur.execute(
             Where(Select(self.MYTHIC_GUID, [], True), [KeyCharacter.ID], [id]).get()
@@ -230,7 +227,7 @@ class MythicDataBase:
             chars.append(char)
         return chars
 
-    def get_keys(self, offset: int = 0, limit: int = 10, column: list[str] = [Key.ID], reverse: list[bool] = [False]) -> list[Type[Key]]:
+    def get_keys(self, offset: int = 0, limit: int = 10, column: list[str] = [Key.ID], reverse: list[bool] = [False]) -> list[Key]:
         '''SELECT limit keys with offset Sorted by column with [reverse] order'''
         res = self.cur.execute(
             Order(
@@ -252,7 +249,8 @@ class MythicDataBase:
             keys.append(key)
         return keys
 
-    def get_character_keys(self, name: str = None, guid: int = None):
+    def get_character_keys(self, name: str = None, guid: int = None) -> list[Key]:
+        '''return character keys by character's name or guid'''
         if guid:
             cmd = Where(Select(self.CHARACTERS, [Character.KEYS]), [Character.GUID], [guid]).get()
         if name:
@@ -286,7 +284,7 @@ class AsyncMythicDataBase:
             return self.result
 
     def __init__(self) -> None:
-        def init(queue: Queue):
+        def handler(queue: Queue):
             self.MDB = MythicDataBase()
             while True:
                 try:
@@ -297,15 +295,29 @@ class AsyncMythicDataBase:
                     req[2].put(req[0](*req[1]))
                     queue.task_done()
         self.queue = Queue()
-        Thread(target = init, args = (self.queue,), daemon = True).start()
+        Thread(target = handler, args = (self.queue,), daemon = True).start()
         sleep(1)
 
     def add_key(self, key: Key) -> None:
+        '''add key to MYTHIC table'''
         self.queue.put((self.MDB.add_key, (key,)))
 
-    def get_character_by_name(self, name: str) -> list[Type[Character]]:
+    def get_character_by_name(self, name: str) -> list[Character]:
+        '''SELECT character whose nickname start with name'''
         res = self.Result()
         self.queue.put((self.MDB.get_character_by_name, (name,), res))
+        return res
+
+    def get_character_by_guid(self, guid: int) -> Character:
+        '''SELECT character whose nickname start with name'''
+        res = self.Result()
+        self.queue.put((self.MDB.get_character_by_guid, (guid), res))
+        return res
+
+    def get_characters_by_key_id(self, id: int) -> list[KeyCharacter]:
+        '''SELECT characters from key by key id'''
+        res = self.Result()
+        self.queue.put((self.MDB.get_characters_by_key_id, (id), res))
         return res
 
     def get_keys(self, offset: int = 0, limit: int = 10, column: list[str] = [Key.ID], reverse: list[bool] = [False]) -> list[Key]:
@@ -313,7 +325,13 @@ class AsyncMythicDataBase:
         res = self.Result()
         self.queue.put((self.MDB.get_keys, (offset, limit, column, reverse), res))
         return res
-    
+
+    def get_character_keys(self, name: str = None, guid: int = None) -> list[Key]:
+        '''return character keys by character's name or guid'''
+        res = self.Result()
+        self.queue.put((self.MDB.get_character_keys, (name, guid), res))
+        return res
+      
     def size(self) -> int:
         res = self.Result()
         self.queue.put((self.MDB.size, (), res))
