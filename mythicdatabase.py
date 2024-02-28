@@ -317,7 +317,7 @@ class AsyncMythicDataBase:
     def get_characters_by_key_id(self, id: int) -> list[KeyCharacter]:
         '''SELECT characters from key by key id'''
         res = self.Result()
-        self.queue.put((self.MDB.get_characters_by_key_id, (id), res))
+        self.queue.put((self.MDB.get_characters_by_key_id, (id,), res))
         return res
 
     def get_keys(self, offset: int = 0, limit: int = 10, column: list[str] = [Key.ID], reverse: list[bool] = [False]) -> list[Key]:
