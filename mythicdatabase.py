@@ -1,4 +1,5 @@
 from threading import Thread
+from concurrent.futures import ThreadPoolExecutor
 from queue import Queue, Empty
 import sqlite3 as sq
 from sqliterequests import *
@@ -12,6 +13,9 @@ class KeyCharacter:
     ilvl: int
     covenant_id: int
     soulbind_id: int
+    inst: str
+    score: int
+    affixes: str
     ID = 'id'
     GUID = 'guid'
     NAME = 'name'
@@ -19,10 +23,13 @@ class KeyCharacter:
     ILVL = 'Ilvl'
     COVENANT_ID = 'CovenantID'
     SOULBIND_ID = 'SoulbindID'
-    ARGS = [ID, GUID, NAME, SPEC_ID, ILVL, COVENANT_ID, SOULBIND_ID]
+    INST = 'inst'
+    SCORE = 'score'
+    AFFIXES = 'affixes'
+    ARGS = [ID, GUID, NAME, SPEC_ID, ILVL, COVENANT_ID, SOULBIND_ID, INST, SCORE, AFFIXES]
 
     def __str__(self):
-        s = [self.id, self.guid, self.name, self.spec_id, self.ilvl, self.covenant_id, self.soulbind_id]
+        s = [self.id, self.guid, self.name, self.spec_id, self.ilvl, self.covenant_id, self.soulbind_id, self.inst, self.score]
         str = ''
         for i in range(len(s)):
             str += f"{self.ARGS[i]} = {s[i]}; "
@@ -93,6 +100,7 @@ class MythicDataBase:
             self._size = 0
     
     def __del__(self) -> None:
+        self.flush()
         self.cur.close()
         self.conn.close()
 
@@ -126,7 +134,10 @@ class MythicDataBase:
                 {KeyCharacter.SPEC_ID} INTEGER,
                 {KeyCharacter.ILVL} INTEGER,
                 {KeyCharacter.COVENANT_ID} INTEGER, 
-                {KeyCharacter.SOULBIND_ID} INTEGER
+                {KeyCharacter.SOULBIND_ID} INTEGER,
+                {KeyCharacter.INST} TEXT,
+                {KeyCharacter.SCORE} INTEGER,
+                {KeyCharacter.AFFIXES} TEXT
             )'''
         )
         self.cur.execute(
@@ -142,6 +153,9 @@ class MythicDataBase:
             )'''
         )
 
+    def exe(self, req: Request):
+        return self.cur.execute(req.get()).fetchall()
+
     def add_key(self, key: Key) -> None:
         '''add key to MYTHIC table'''
         id = self.cur.execute(
@@ -156,7 +170,7 @@ class MythicDataBase:
                 Insert(
                     self.MYTHIC_GUID, 
                     KeyCharacter.ARGS,
-                    [id, member.guid, member.name, member.spec_id, member.ilvl, member.covenant_id, member.soulbind_id]
+                    [id, member.guid, member.name, member.spec_id, member.ilvl, member.covenant_id, member.soulbind_id, member.inst, member.score, member.affixes]
                 ).get()
             )
             keys = self.cur.execute(
@@ -176,10 +190,27 @@ class MythicDataBase:
                 )
         self._size+=1
 
-    def count_score(self, offset: int, limit: int):
+    def get_characters(self, offset: int = 0, limit: int = 10, column: list[str] = [Character.NAME], reverse: list[bool] = [False]) -> list[Character]:
+        '''SELECT limit characters with offset Sorted by column with [reverse] order'''
         res = self.cur.execute(
-            Select(self.CHARACTERS, [], all=True).get() + f''' LIMIT {offset}, {limit}'''
+            Order(
+                Select(self.CHARACTERS, [], True),
+                column,
+                reverse
+            ).get() + f''' LIMIT {offset}, {limit}'''
         )
+        chars = []
+        for i in res.fetchall():
+            char = Character()
+            char.guid = int(i[0])
+            char.name = i[1]
+            char.keys = i[2]
+            char.score = int(i[3])
+            char.tank_score = int(i[4])
+            char.heal_score = int(i[5])
+            char.dps_score = int(i[6])
+            chars.append(char)
+        return chars
 
     def get_character_by_name(self, name: str) -> list[Character]:
         '''SELECT character whose nickname start with name'''
@@ -233,7 +264,8 @@ class MythicDataBase:
             Where(Select(self.MYTHIC_GUID, [], True), [KeyCharacter.ID], [id]).get()
         )
         chars = []
-        for i in res.fetchall():
+        res = res.fetchall()
+        for i in res:
             char = KeyCharacter()
             char.id = i[0]
             char.guid = i[1]
@@ -242,8 +274,31 @@ class MythicDataBase:
             char.ilvl = i[4]
             char.covenant_id = i[5]
             char.soulbind_id = i[6]
+            char.inst = i[7]
+            char.score = i[8]
+            char.affixes = i[9]
             chars.append(char)
         return chars
+
+    def get_key_by_id(self, id: int) -> Key:
+        i = self.cur.execute(
+            Where(
+                Select(self.MYTHIC, [], True),
+                [Key.ID],
+                [id]
+            ).get()
+        ).fetchone()
+        key = Key()
+        key.id = i[0]
+        key.inst = i[1]
+        key.affixes = i[2]
+        key.challenge_level = i[3]
+        key.date = i[4]
+        key.record_time = i[5]
+        key.timer_level = i[6]
+        key.score = i[7]
+        key.characters = self.get_characters_by_key_id(key.id)
+        return key
 
     def get_keys(self, offset: int = 0, limit: int = 10, column: list[str] = [Key.ID], reverse: list[bool] = [False]) -> list[Key]:
         '''SELECT limit keys with offset Sorted by column with [reverse] order'''
@@ -265,6 +320,7 @@ class MythicDataBase:
             key.record_time = i[5]
             key.timer_level = i[6]
             key.score = i[7]
+            key.characters = self.get_characters_by_key_id(key.id)
             keys.append(key)
         return keys
 
@@ -277,7 +333,7 @@ class MythicDataBase:
         res = self.cur.execute(cmd).fetchone()[0].split()
         keys = []
         for i in res:
-            keys.append(self.get_keys(int(i)-1)[0])
+            keys.append(self.get_key_by_id(int(i)))
         return keys
     
     def size(self) -> int:
@@ -340,6 +396,52 @@ class AsyncMythicDataBase:
         self.queue.put((self.MDB.add_key, (key,), res))
         return res
 
+    def exe(self, req: Request) -> Result:
+        res = self.Result()
+        self.queue.put((self.MDB.exe, (req,), res))
+        return res
+
+    def get_characters(self, offset: int = 0, limit: int = 10, column: list[str] = [Character.NAME], reverse: list[bool] = [False]) -> list[Character]:
+        '''SELECT limit characters with offset Sorted by column with [reverse] order'''
+        res = self.Result()
+        self.queue.put((self.MDB.get_characters, (offset, limit, column, reverse), res))
+        return res
+
+    def count_score(self):
+        def handler(char: Character):
+            import wow
+            res = self.exe(
+                Where(
+                    Select(self.MYTHIC_GUID, [KeyCharacter.SPEC_ID, KeyCharacter.INST, KeyCharacter.SCORE, KeyCharacter.AFFIXES]),
+                    [KeyCharacter.GUID],
+                    [char.guid]
+                )
+            ).get()
+            wow.count_score(char, res)
+            self.exe(
+                Where(
+                    Update(
+                        self.CHARACTERS,
+                        [Character.SCORE, Character.TANK_SCORE, Character.HEAL_SCORE, Character.DPS_SCORE],
+                        [char.score, char.tank_score, char.heal_score, char.dps_score]
+                    ),
+                    [Character.GUID],
+                    [char.guid]
+                )
+            )
+            #self.flush()
+
+        with ThreadPoolExecutor(3) as exe:
+            offset = 0
+            limit = 10
+            while True:
+                chars = self.get_characters(offset, limit).get()
+                if not chars:
+                    break
+                offset += limit
+                for char in chars:
+                    exe.submit(handler, char)
+
     def get_character_by_name(self, name: str) -> list[Character]:
         '''SELECT character whose nickname start with name'''
         res = self.Result()
@@ -349,7 +451,7 @@ class AsyncMythicDataBase:
     def get_character_by_guid(self, guid: int) -> Character:
         '''SELECT character whose nickname start with name'''
         res = self.Result()
-        self.queue.put((self.MDB.get_character_by_guid, (guid), res))
+        self.queue.put((self.MDB.get_character_by_guid, (guid,), res))
         return res
 
     def get_characters_by_key_id(self, id: int) -> list[KeyCharacter]:
@@ -378,6 +480,7 @@ class AsyncMythicDataBase:
 MDB = AsyncMythicDataBase()
 
 if __name__ == '__main__':
-    print('MAIN():')
-    #print(' '.join(map(str, MDB.get_keys(0, column=[Key.Da]).get())))
-    sleep(3)
+    print('MAIN():', MDB)
+    MDB.count_score()
+    MDB.flush().get()
+    

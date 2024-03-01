@@ -107,7 +107,8 @@ def get_affix_img(affix: int):
 def get_score(level: int, record: int) -> int:
     return 30+5*level+int(level>3)*5+int(level>6)*5+int(level>9)*10 + 2.5*record - 3*(not record)
 
-def count_score(char: Character, keys: list[Key]):
+def count_score(char: Character, keys: list):
+    '''keys: [KeyCharacter.SPEC_ID, KeyCharacter.INST, KeyCharacter.SCORE, KeyCharacter.AFFIXES]'''
     insts = {
         'Sanguine Depths' : {},
         'Spires of Ascension' : {},
@@ -119,29 +120,25 @@ def count_score(char: Character, keys: list[Key]):
         'Theater of Pain' : {},
         'Tazavesh the Veiled Market' : {}
     }
-    for key in keys:
-        for c in key.characters:
-            if char.name == c.name:
-                if c.spec_id not in insts[key.inst]:
-                    k = Key()
-                    k.score = 0
-                    insts[key.inst][c.spec_id] = [k, k]
-                if 'https://wow.zamimg.com/images/wow/icons/medium/ability_toughness.jpg' in key.affixes:
-                    if insts[key.inst][c.spec_id][0].score < key.score:
-                        insts[key.inst][c.spec_id][0] = key
-                else:
-                    if insts[key.inst][c.spec_id][1].score < key.score:
-                        insts[key.inst][c.spec_id][1] = key
-                continue
+    for spec_id, inst, score, affixes in keys:
+        if spec_id not in insts[inst]:
+            insts[inst][spec_id] = [0, 0]
+        if 'https://wow.zamimg.com/images/wow/icons/medium/ability_toughness.jpg' in affixes:
+            if insts[inst][spec_id][0] < score:
+                insts[inst][spec_id][0] = score
+        else:
+            if insts[inst][spec_id][1] < score:
+                insts[inst][spec_id][1] = score
+        continue
     spec_score = {}
     for inst, other in insts.items():
         bk1 = bk2 = 0
         for spec, k in other.items():
-            if k[0].score > bk1:
-                bk1 = k[0].score
-            if k[1].score > bk2:
-                bk2 = k[1].score
-            score = [k[0].score, k[1].score]
+            if k[0] > bk1:
+                bk1 = k[0]
+            if k[1] > bk2:
+                bk2 = k[1]
+            score = [k[0], k[1]]
             if spec not in spec_score:
                 spec_score[spec] = 0
             spec_score[spec] += max(score)*1.5 + min(score)*0.5

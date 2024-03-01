@@ -71,6 +71,7 @@ def parse():
                     memeber.soulbind_id = int(row_member['SoulbindID'])
                     memeber.inst = key.inst
                     memeber.score = key.score
+                    memeber.affixes = key.affixes
                     key.characters.append(memeber)
                 MDB.add_key(key)
         except Exception as e:
