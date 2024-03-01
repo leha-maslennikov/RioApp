@@ -69,25 +69,26 @@ def parse():
                     memeber.ilvl = int(row_member['Ilvl'])
                     memeber.covenant_id = int(row_member['CovenantID'])
                     memeber.soulbind_id = int(row_member['SoulbindID'])
+                    memeber.inst = key.inst
+                    memeber.score = key.score
                     key.characters.append(memeber)
                 MDB.add_key(key)
-                MDB.flush()
         except Exception as e:
             print("parse_exception: ", e)
-            print(js)
+            #print(js)
             break
             exit(0)
-        break
 
 
 def get_all_keys():
     ses.get(url='https://cpsl.wowcircle.me')
     ses.post(url='https://cpsl.wowcircle.me/main.php?1&serverId=null', data='[{"tid":4,"data":[{"accountName":"'+login+'","password":"'+password+'","captcha":""}],"action":"wow_Services","type":"rpc","method":"cmdLogin"}]')
     MDB.create().get()
-
     parse()
+    MDB.flush().get()
 
 
 if __name__ == '__main__':
     ses = requests.session()
     get_all_keys()
+    ses.close()

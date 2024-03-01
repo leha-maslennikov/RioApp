@@ -1,5 +1,6 @@
 import flet as ft
 import requests
+from mythicdatabase import Character, Key, KeyCharacter, MDB
 
 dung = {
     '2284' :	'Sanguine Depths',
@@ -74,6 +75,7 @@ class Specialization:
     class_img: str
     spec_img: str
     color: str
+    role: str
 
     def __init__(self, spec_id: int, name: str) -> None:
         r = specialization[spec_id]
@@ -83,6 +85,7 @@ class Specialization:
         self.spec_img = r[3]
         self.color = colors[self._class]
         self.name = name
+        self.role = r[4]
 
     def get_text(self):
         return ft.Row(
@@ -92,10 +95,63 @@ class Specialization:
                 ]
             )
     
+cahce = {}
 def get_affix_img(affix: int):
     '''src to img'''
+    if affix in cahce:
+        return cahce[affix]
     res = requests.get(f'https://nether.wowhead.com/tooltip/affix/{affix}?dataEnv=1&locale=0')
-    return f'https://wow.zamimg.com/images/wow/icons/medium/{res.json()["icon"]}.jpg'
+    cahce[affix] = f'https://wow.zamimg.com/images/wow/icons/medium/{res.json()["icon"]}.jpg'
+    return cahce[affix]
 
 def get_score(level: int, record: int) -> int:
     return 30+5*level+int(level>3)*5+int(level>6)*5+int(level>9)*10 + 2.5*record - 3*(not record)
+
+def count_score(char: Character, keys: list[Key]):
+    insts = {
+        'Sanguine Depths' : {},
+        'Spires of Ascension' : {},
+        'The Necrotic Wake' : {},
+        'Halls of Atonement' : {},
+        'Plaguefall' : {},
+        'Mists of Tirna Scithe' : {},
+        'De Other Side' : {},
+        'Theater of Pain' : {},
+        'Tazavesh the Veiled Market' : {}
+    }
+    for key in keys:
+        for c in key.characters:
+            if char.name == c.name:
+                if c.spec_id not in insts[key.inst]:
+                    k = Key()
+                    k.score = 0
+                    insts[key.inst][c.spec_id] = [k, k]
+                if 'https://wow.zamimg.com/images/wow/icons/medium/ability_toughness.jpg' in key.affixes:
+                    if insts[key.inst][c.spec_id][0].score < key.score:
+                        insts[key.inst][c.spec_id][0] = key
+                else:
+                    if insts[key.inst][c.spec_id][1].score < key.score:
+                        insts[key.inst][c.spec_id][1] = key
+                continue
+    spec_score = {}
+    for inst, other in insts.items():
+        bk1 = bk2 = 0
+        for spec, k in other.items():
+            if k[0].score > bk1:
+                bk1 = k[0].score
+            if k[1].score > bk2:
+                bk2 = k[1].score
+            score = [k[0].score, k[1].score]
+            if spec not in spec_score:
+                spec_score[spec] = 0
+            spec_score[spec] += max(score)*1.5 + min(score)*0.5
+        char.score += max(bk1, bk2)*1.5 + min(bk1, bk2)*0.5
+    for spec, k in spec_score.items():
+        s = Specialization(spec, char.name)
+        if s.role == 'd':
+            char.dps_score += k
+        if s.role == 't':
+            char.tank_score += k
+        if s.role == 'h':
+            char.heal_score += k
+    return spec_score
