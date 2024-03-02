@@ -28,6 +28,8 @@ json_data = [
 ]
 
 def get_page():
+    from time import time
+    t = time()
     while True:
         response = ses.post('https://cpsl.wowcircle.me/main.php?1&serverId=null', json=json_data)
         if response.status_code != 200:
@@ -35,7 +37,9 @@ def get_page():
             print('get_page_1: ', response.text)
             exit(0)
         if json_data[0]['data'][0]['page'] % 100 == 0:
-            print(json_data[0]['data'][0]['page'])
+            print(json_data[0]['data'][0]['page'], time()-t)
+            MDB.flush()
+            t = time()
         json_data[0]['data'][0]['page'] += 1
         json_data[0]['data'][0]['start'] += 25
         try:
