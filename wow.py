@@ -1,6 +1,6 @@
 import flet as ft
 import requests
-from mythicdatabase import Character, Key, KeyCharacter, MDB
+from mythicdatabase import Character
 
 dung = {
     '2284' :	'Sanguine Depths',
@@ -78,7 +78,10 @@ class Specialization:
     role: str
 
     def __init__(self, spec_id: int, name: str) -> None:
-        r = specialization[spec_id]
+        try:
+            r = specialization[spec_id]
+        except:
+            r = specialization[102]
         self._class = r[0]
         self.class_img = r[1]
         self.spec = r[2]
