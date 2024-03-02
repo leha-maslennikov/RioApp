@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from queue import Queue, Empty
 import sqlite3 as sq
 from sqliterequests import *
-from time import sleep
+from time import sleep, time
 
 class KeyCharacter:
     id: int  
@@ -308,21 +308,8 @@ class MythicDataBase:
                 column,
                 reverse
             ).get() + f''' LIMIT {offset}, {limit}'''
-        )
-        keys = []
-        for i in res.fetchall():
-            key = Key()
-            key.id = i[0]
-            key.inst = i[1]
-            key.affixes = i[2]
-            key.challenge_level = i[3]
-            key.date = i[4]
-            key.record_time = i[5]
-            key.timer_level = i[6]
-            key.score = i[7]
-            key.characters = self.get_characters_by_key_id(key.id)
-            keys.append(key)
-        return keys
+        ).fetchall()
+        return res
 
     def get_character_keys(self, name: str = None, guid: int = None) -> list[Key]:
         '''return character keys by character's name or guid'''
@@ -375,7 +362,6 @@ class AsyncMythicDataBase:
                     queue.task_done()
         self.queue = Queue()
         Thread(target = handler, args = (self.queue,), daemon = True).start()
-        sleep(1)
 
     def flush(self) -> Result:
         res = self.Result()
@@ -463,7 +449,28 @@ class AsyncMythicDataBase:
     def get_keys(self, offset: int = 0, limit: int = 10, column: list[str] = [Key.ID], reverse: list[bool] = [False]) -> list[Key]:
         '''SELECT limit keys wit offset'''
         res = self.Result()
-        self.queue.put((self.MDB.get_keys, (offset, limit, column, reverse), res))
+        def handler(handler_res: self.Result):
+            keys = []
+            k = 0
+            handler_res = handler_res.get()
+            chars = [self.get_characters_by_key_id(i[0]) for i in handler_res]
+            for i in handler_res:
+                key = Key()
+                key.id = i[0]
+                key.inst = i[1]
+                key.affixes = i[2]
+                key.challenge_level = i[3]
+                key.date = i[4]
+                key.record_time = i[5]
+                key.timer_level = i[6]
+                key.score = i[7]
+                key.characters = chars[k]
+                k+=1
+                keys.append(key)
+            res.put(keys)
+        handler_res = self.Result()
+        self.queue.put((self.MDB.get_keys, (offset, limit, column, reverse), handler_res))
+        Thread(target=handler, args=(handler_res,)).start()
         return res
 
     def get_character_keys(self, name: str = None, guid: int = None) -> list[Key]:
@@ -481,6 +488,6 @@ MDB = AsyncMythicDataBase()
 
 if __name__ == '__main__':
     print('MAIN():', MDB)
-    MDB.count_score()
-    MDB.flush().get()
+    #MDB.count_score()
+    #MDB.flush().get()
     

@@ -1,5 +1,6 @@
 import flet as ft
 import pages
+import Controls
 
 def main(page: ft.Page):
     page.theme = ft.Theme(color_scheme_seed='blue', font_family='Verdana')
@@ -8,30 +9,42 @@ def main(page: ft.Page):
 
     def f(route: ft.RouteChangeEvent):
         tr = ft.TemplateRoute(route.route)
-        if tr.match(f'/{pages.MAIN}/:offset'):
+        if tr.match(f'/{pages.MAIN}'):
+            pages.progress(page)
+            page.update()
+            Controls.cahce.clear()
             page.views.clear()
-            route.page.views.append(pages.main(page, int(tr.offset)))
-        elif tr.match(f'/{pages.KEY_TOP}/:offset'):
+            route.page.views.append(pages.main(page))
+        elif tr.match(f'/{pages.KEY_TOP}'):
+            pages.progress(page)
+            page.update()
+            Controls.cahce.clear()
             page.views.clear()
-            route.page.views.append(pages.key_top(page, int(tr.offset)))
+            route.page.views.append(pages.key_top(page))
         elif tr.match(f'/{pages.CHARACTER_PAGE}/:guid'):
             route.page.views.append(pages.character_page(page, int(tr.guid)))
+
 
     def p(view: ft.ViewPopEvent):
         page = view.page
         page.views.pop()
         if len(page.views) != 0:
             page.clean()
-            page.go(page.views[-1].route)
+            page.update()
 
     def u(e: ft.ControlEvent):
-        e.page.clean()
-        e.page.go(e.page.route)
+        page.clean()
+        e.route = page.route
+        f(e)
+        page.update()
+
 
     page.on_route_change = f
-    page.on_resize = u
+    #page.on_resize = u
     page.on_view_pop = p
-    page.go(f'/{pages.KEY_TOP}/0')
+    #pages.progress(page)
+    #page.update()
+    page.go(f'/{pages.KEY_TOP}')
 
 
     
