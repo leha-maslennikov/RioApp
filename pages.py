@@ -28,36 +28,10 @@ def character_page(page: ft.Page, guid: int):
       bgcolor = ft.colors.PRIMARY
    )
 
+alert = ft.AlertDialog(open=True, title=ft.Row([ft.Text(PROGRES_RING, color=ft.colors.ON_TERTIARY_CONTAINER, size=16)], alignment=ft.MainAxisAlignment.CENTER), content = ft.Row([ft.ProgressRing(color=ft.colors.ON_TERTIARY_CONTAINER)], alignment=ft.MainAxisAlignment.CENTER), bgcolor=ft.colors.TERTIARY_CONTAINER)
 def progress(page: ft.Page):
-   x = ft.Container(
-      ft.Column(
-         [ 
-            ft.Row([ft.Text(PROGRES_RING, color=ft.colors.ON_TERTIARY_CONTAINER, size=16)], alignment=ft.MainAxisAlignment.CENTER),
-            ft.Row([ft.ProgressRing(color=ft.colors.ON_TERTIARY_CONTAINER)], alignment=ft.MainAxisAlignment.CENTER)
-         ]
-      ),
-      bgcolor=ft.colors.TERTIARY_CONTAINER,
-      border_radius=10,
-      width = page.width*0.20,
-      padding=20
-   )
-   page.views.append(
-         ft.View(
-         route = page.route+'/progress_ring',
-         controls = [
-            ft.Container(
-               ft.Column(
-                  [x],
-                  alignment=ft.MainAxisAlignment.CENTER,
-                  expand=True
-               ),
-               expand=True,
-               alignment=ft.alignment.center,
-               bgcolor=ft.colors.with_opacity(0.5, ft.colors.TERTIARY)
-            )
-         ]
-      )
-   )
+   alert.open = True
+   page.views[-1].controls.append(alert)
 
 
 if __name__ == '__main__':

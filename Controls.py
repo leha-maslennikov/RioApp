@@ -175,25 +175,30 @@ def get_table_headers():
 
     return row
 
-cahce = {}
+keys_cahce = {}
 def get_keys_table(offset: int, column: list[str], reverse: list[bool]):
     def click(e: ft.ControlEvent):
-        e.control.disabled = True
-        e.control.update()
-        #k = time()
+        from pages import progress, alert
+        progress(e.page)
+        e.page.update()
         args = ([Key.DATE], [True]) if MAIN in e.page.route else ([Key.ID], [False])
-        e.page.views[-1].controls = get_keys_table(e.control.data, *args)
+        tmp = get_keys_table(e.control.data, *args)
+        alert.open = False
+        e.page.update()
+        e.page.views[-1].controls = tmp
         e.page.views[-1].update()
-        #print('------', time()-k)
     size = MDB.size()
-    if offset in cahce:
-        g = cahce[offset]
-        if len(cahce) > 10:
-            cahce.clear()
-        cahce[offset+10] = MDB.get_keys(offset=offset+10, limit=10, column=column, reverse=reverse)
-        cahce[offset-10] = MDB.get_keys(offset=offset-10, limit=10, column=column, reverse=reverse)
+    if offset in keys_cahce:
+        g = keys_cahce[offset]
+        if len(keys_cahce) > 30:
+            keys_cahce.clear()
+        if offset+10 not in keys_cahce:
+            keys_cahce[offset+10] = MDB.get_keys(offset=offset+10, limit=10, column=column, reverse=reverse)
+        if offset-10 not in keys_cahce:
+            keys_cahce[offset-10] = MDB.get_keys(offset=offset-10, limit=10, column=column, reverse=reverse)
     else:
         g = MDB.get_keys(offset=offset, limit=10, column=column, reverse=reverse)
+        keys_cahce[offset] = g
     headers = get_table_headers()
     exp1 = (offset == 0)
     exp2 = (size.get() - offset - 10 <= 0)
@@ -213,9 +218,10 @@ def get_keys_table(offset: int, column: list[str], reverse: list[bool]):
     g = g.get()
     for i in g:
         keys.controls.append(get_key_row(key=i))
-    if offset+10 not in cahce:
-        cahce[offset+10] = MDB.get_keys(offset=offset+10, limit=10, column=column, reverse=reverse)
-        cahce[offset-10] = MDB.get_keys(offset=offset-10, limit=10, column=column, reverse=reverse)
+    if offset+10 not in keys_cahce:
+        keys_cahce[offset+10] = MDB.get_keys(offset=offset+10, limit=10, column=column, reverse=reverse)
+    if offset-10 not in keys_cahce:
+        keys_cahce[offset-10] = MDB.get_keys(offset=offset-10, limit=10, column=column, reverse=reverse)
 
     controls = ft.Container(
         ft.Column(
@@ -240,5 +246,4 @@ def get_keys_table(offset: int, column: list[str], reverse: list[bool]):
             expand=True
         )
     ]
-
     return controls

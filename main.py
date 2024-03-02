@@ -9,18 +9,25 @@ def main(page: ft.Page):
 
     def f(route: ft.RouteChangeEvent):
         tr = ft.TemplateRoute(route.route)
+        page.clean()
         if tr.match(f'/{pages.MAIN}'):
             pages.progress(page)
             page.update()
-            Controls.cahce.clear()
+            Controls.keys_cahce.clear()
+            tmp = pages.main(page)
+            pages.alert.open = False
+            page.update()
             page.views.clear()
-            route.page.views.append(pages.main(page))
+            route.page.views.append(tmp)
         elif tr.match(f'/{pages.KEY_TOP}'):
             pages.progress(page)
             page.update()
-            Controls.cahce.clear()
+            Controls.keys_cahce.clear()
+            tmp = pages.key_top(page)
+            pages.alert.open = False
+            page.update()
             page.views.clear()
-            route.page.views.append(pages.key_top(page))
+            route.page.views.append(tmp)
         elif tr.match(f'/{pages.CHARACTER_PAGE}/:guid'):
             route.page.views.append(pages.character_page(page, int(tr.guid)))
 
@@ -42,8 +49,6 @@ def main(page: ft.Page):
     page.on_route_change = f
     #page.on_resize = u
     page.on_view_pop = p
-    #pages.progress(page)
-    #page.update()
     page.go(f'/{pages.KEY_TOP}')
 
 
