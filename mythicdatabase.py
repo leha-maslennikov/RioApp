@@ -1,5 +1,5 @@
 from threading import Thread
-from concurrent.futures import ThreadPoolExecutor
+#from concurrent.futures import ThreadPoolExecutor
 from queue import Queue, Empty
 import sqlite3 as sq
 from sqliterequests import *
@@ -350,7 +350,7 @@ class AsyncMythicDataBase:
         '''SELECT character by guid'''
         res = self.Result()
         def f(conn: sq.Connection):
-            r = self.cur.execute(
+            r = conn.execute(
                 Where(
                     Select(
                         self.CHARACTERS,
