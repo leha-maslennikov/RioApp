@@ -351,46 +351,155 @@ class AsyncMythicDataBase:
 
     def __init__(self) -> None:
         def handler(queue: Queue):
-            self.MDB = MythicDataBase()
             while True:
                 try:
                     req = queue.get()
                 except Empty:
                     continue
                 else:
-                    req[2].put(req[0](*req[1]))
+                    with sq.connect('data.db') as conn:
+                        req(conn)
                     queue.task_done()
         self.queue = Queue()
         Thread(target = handler, args = (self.queue,), daemon = True).start()
+        Thread(target = handler, args = (self.queue,), daemon = True).start()
+        with sq.connect('data.db') as conn:
+            try:
+                self._size = conn.execute(f'SELECT COUNT(*) FROM {MythicDataBase.MYTHIC.name}').fetchone()[0]
+            except:
+                self._size = 0
 
     def flush(self) -> Result:
         res = self.Result()
-        self.queue.put((self.MDB.flush, (), res))
+        def f(conn: sq.Connection):
+            conn.commit()
+            res.put(True)
+        self.queue.put(f)
         return res
 
-    def create(self) -> Result:
+    def create(self) -> None:
         '''DROP IF EXIST AND CREATE mythic, characters, mythic_guid
         Affixes ChallengeLevel Date RecordTime TimerLevel
         guid name specID CovenantID SoulbindID'''
         res = self.Result()
-        self.queue.put((self.MDB.create, (), res))
+        def f(conn: sq.Connection):
+            conn.execute(f'DROP TABLE IF EXISTS {self.MYTHIC.name}')
+            conn.execute(f'DROP TABLE IF EXISTS {self.CHARACTERS.name}')
+            conn.execute(f'DROP TABLE IF EXISTS {self.MYTHIC_GUID.name}')
+            conn.execute(
+                f'''
+                CREATE TABLE mythic (
+                    {Key.ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                    {Key.INST} TEXT,
+                    {Key.AFFIXES} TEXT,
+                    {Key.CHALLENGE_LEVEL} INTEGER,
+                    {Key.DATE} TEXT,
+                    {Key.RECORD_TIME} TEXT,
+                    {Key.TIMER_LEVEL} INTEGER,
+                    {Key.SCORE} INTEGER
+                )'''
+            )
+            conn.execute(
+                f'''
+                CREATE TABLE mythic_guid (
+                    {KeyCharacter.ID} INTEGER,  
+                    {KeyCharacter.GUID} INTEGER,
+                    {KeyCharacter.NAME} TEXT,
+                    {KeyCharacter.SPEC_ID} INTEGER,
+                    {KeyCharacter.ILVL} INTEGER,
+                    {KeyCharacter.COVENANT_ID} INTEGER, 
+                    {KeyCharacter.SOULBIND_ID} INTEGER,
+                    {KeyCharacter.INST} TEXT,
+                    {KeyCharacter.SCORE} INTEGER,
+                    {KeyCharacter.AFFIXES} TEXT
+                )'''
+            )
+            conn.execute(
+                f'''
+                CREATE TABLE characters (
+                    {Character.GUID} INTEGER PRIMARY KEY,  
+                    {Character.NAME} TEXT,
+                    {Character.KEYS} TEXT,
+                    {Character.SCORE} INTEGER,
+                    {Character.TANK_SCORE} INTEGER,
+                    {Character.HEAL_SCORE} INTEGER,
+                    {Character.DPS_SCORE} INTEGER
+                )'''
+            )
+            res.put(True)
+        self.queue.put(f)
         return res
 
     def add_key(self, key: Key) -> Result:
         '''add key to MYTHIC table'''
         res = self.Result()
-        self.queue.put((self.MDB.add_key, (key,), res))
+        def f(conn: sq.Connection):
+            id = conn.execute(
+                Insert(
+                    self.MYTHIC, 
+                    Key.ARGS[1:],
+                    [key.inst, key.affixes, key.challenge_level, key.date, key.record_time, key.timer_level, key.score]
+                ).get()
+            ).lastrowid
+            for member in key.characters:
+                conn.execute(
+                    Insert(
+                        self.MYTHIC_GUID, 
+                        KeyCharacter.ARGS,
+                        [id, member.guid, member.name, member.spec_id, member.ilvl, member.covenant_id, member.soulbind_id, member.inst, member.score, member.affixes]
+                    ).get()
+                )
+                keys = conn.execute(
+                    Where(Select(self.CHARACTERS, [Character.KEYS]), [Character.GUID], [member.guid]).get()
+                ).fetchone()
+                if keys:
+                    conn.execute(
+                        Where(Update(self.CHARACTERS, [Character.KEYS], [keys[0]+' '+str(id)]), [Character.GUID], [member.guid]).get()
+                    )
+                else:
+                    conn.execute(
+                        Insert(
+                            self.CHARACTERS,
+                            Character.ARGS,
+                            [member.guid, member.name, str(id), 0, 0, 0, 0]
+                        ).get()
+                    )
+            self._size+=1
+            res.put(True)
+        self.queue.put(f)
         return res
 
     def exe(self, req: Request) -> Result:
         res = self.Result()
-        self.queue.put((self.MDB.exe, (req,), res))
+        def f(conn: sq.Connection):
+            res.put(conn.execute(req.get()).fetchall())
+        self.queue.put(f)
         return res
 
     def get_characters(self, offset: int = 0, limit: int = 10, column: list[str] = [Character.NAME], reverse: list[bool] = [False]) -> list[Character]:
         '''SELECT limit characters with offset Sorted by column with [reverse] order'''
         res = self.Result()
-        self.queue.put((self.MDB.get_characters, (offset, limit, column, reverse), res))
+        def f(conn: sq.Connection):
+            r = conn.execute(
+                Order(
+                    Select(self.CHARACTERS, [], True),
+                    column,
+                    reverse
+                ).get() + f''' LIMIT {offset}, {limit}'''
+            )
+            chars = []
+            for i in r.fetchall():
+                char = Character()
+                char.guid = int(i[0])
+                char.name = i[1]
+                char.keys = i[2]
+                char.score = int(i[3])
+                char.tank_score = int(i[4])
+                char.heal_score = int(i[5])
+                char.dps_score = int(i[6])
+                chars.append(char)
+            res.put(chars)
+        self.queue.put(f)
         return res
 
     def count_score(self):
@@ -415,7 +524,6 @@ class AsyncMythicDataBase:
                     [char.guid]
                 )
             )
-            #self.flush()
 
         with ThreadPoolExecutor(3) as exe:
             offset = 0
@@ -431,58 +539,152 @@ class AsyncMythicDataBase:
     def get_character_by_name(self, name: str) -> list[Character]:
         '''SELECT character whose nickname start with name'''
         res = self.Result()
-        self.queue.put((self.MDB.get_character_by_name, (name,), res))
+        def f(conn: sq.Connection):
+            r = conn.execute(
+                Select(
+                    self.CHARACTERS,
+                    Character.ARGS
+                ).get() + 
+                f''' WHERE {Character.NAME} LIKE '{name}%' '''
+            )
+            chars = []
+            for i in r.fetchall():
+                char = Character()
+                char.guid = i[0]
+                char.name = i[1]
+                char.keys = i[2]
+                char.score = i[3]
+                char.tank_score = i[4]
+                char.heal_score = i[5]
+                char.dps_score = i[6]
+                chars.append(char)
+            res.put(chars)
+        self.queue.put(f)
         return res
 
     def get_character_by_guid(self, guid: int) -> Character:
-        '''SELECT character whose nickname start with name'''
+        '''SELECT character by guid'''
         res = self.Result()
-        self.queue.put((self.MDB.get_character_by_guid, (guid,), res))
+        def f(conn: sq.Connection):
+            r = self.cur.execute(
+                Where(
+                    Select(
+                        self.CHARACTERS,
+                        Character.ARGS
+                    ),
+                    [Character.GUID],
+                    [guid]
+                ).get()
+            )
+            i = r.fetchone()
+            char = Character()
+            char.guid = i[0]
+            char.name = i[1]
+            char.keys = i[2]
+            char.score = i[3]
+            char.tank_score = i[4]
+            char.heal_score = i[5]
+            char.dps_score = i[6]
+            res.put(char)
+        self.queue.put(f)
         return res
 
     def get_characters_by_key_id(self, id: int) -> list[KeyCharacter]:
         '''SELECT characters from key by key id'''
         res = self.Result()
-        self.queue.put((self.MDB.get_characters_by_key_id, (id,), res))
+        def f(conn: sq.Connection):
+            r = conn.execute(
+                Where(Select(self.MYTHIC_GUID, [], True), [KeyCharacter.ID], [id]).get()
+            ).fetchall()
+            chars = []
+            for i in r:
+                char = KeyCharacter()
+                char.id = i[0]
+                char.guid = i[1]
+                char.name = i[2]
+                char.spec_id = i[3]
+                char.ilvl = i[4]
+                char.covenant_id = i[5]
+                char.soulbind_id = i[6]
+                char.inst = i[7]
+                char.score = i[8]
+                char.affixes = i[9]
+                chars.append(char)
+            res.put(chars)
+        self.queue.put(f)
         return res
 
     def get_keys(self, offset: int = 0, limit: int = 10, column: list[str] = [Key.ID], reverse: list[bool] = [False]) -> list[Key]:
         '''SELECT limit keys wit offset'''
         res = self.Result()
-        def handler(handler_res: self.Result):
+        def f(conn: sq.Connection):
+            r = conn.execute(
+                Order(
+                    Select(self.MYTHIC, [], True),
+                    column,
+                    reverse
+                ).get() + f''' LIMIT {offset}, {limit}'''
+            ).fetchall()
             keys = []
-            k = 0
-            handler_res = handler_res.get()
-            chars = [self.get_characters_by_key_id(i[0]) for i in handler_res]
-            for i in handler_res:
+            chars = [self.get_characters_by_key_id(i[0]) for i in r]
+            for i in range(len(r)):
                 key = Key()
-                key.id = i[0]
-                key.inst = i[1]
-                key.affixes = i[2]
-                key.challenge_level = i[3]
-                key.date = i[4]
-                key.record_time = i[5]
-                key.timer_level = i[6]
-                key.score = i[7]
-                key.characters = chars[k]
-                k+=1
+                key.id = r[i][0]
+                key.inst = r[i][1]
+                key.affixes = r[i][2]
+                key.challenge_level = r[i][3]
+                key.date = r[i][4]
+                key.record_time = r[i][5]
+                key.timer_level = r[i][6]
+                key.score = r[i][7]
+                key.characters = chars[i]
                 keys.append(key)
             res.put(keys)
-        handler_res = self.Result()
-        self.queue.put((self.MDB.get_keys, (offset, limit, column, reverse), handler_res))
-        Thread(target=handler, args=(handler_res,)).start()
+        self.queue.put(f)
+        return res
+
+    def get_key_by_id(self, id: int) -> Key:
+        res = self.Result()
+        def f(conn: sq.Connection):
+            i = conn.execute(
+                Where(
+                    Select(self.MYTHIC, [], True),
+                    [Key.ID],
+                    [id]
+                ).get()
+            ).fetchone()
+            key = Key()
+            key.id = i[0]
+            key.inst = i[1]
+            key.affixes = i[2]
+            key.challenge_level = i[3]
+            key.date = i[4]
+            key.record_time = i[5]
+            key.timer_level = i[6]
+            key.score = i[7]
+            key.characters = self.get_characters_by_key_id(key.id)
+            res.put(key)
+        self.queue.put(f)
         return res
 
     def get_character_keys(self, name: str = None, guid: int = None) -> list[Key]:
         '''return character keys by character's name or guid'''
         res = self.Result()
-        self.queue.put((self.MDB.get_character_keys, (name, guid), res))
+        def f(conn: sq.Connection):
+            if guid:
+                cmd = Where(Select(self.CHARACTERS, [Character.KEYS]), [Character.GUID], [guid]).get()
+            if name:
+                cmd = Where(Select(self.CHARACTERS, [Character.KEYS]), [Character.NAME], [name]).get()
+            r = conn.execute(cmd).fetchone()[0].split()
+            keys = []
+            for i in r:
+                keys.append(self.get_key_by_id(int(i)))
+            res.put(keys)
+        self.queue.put(f)
         return res
       
     def size(self) -> int:
-        res = self.Result()
-        self.queue.put((self.MDB.size, (), res))
-        return res
+        return self._size
 
 MDB = AsyncMythicDataBase()
 

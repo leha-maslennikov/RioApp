@@ -3,7 +3,7 @@ from Text import *
 from mythicdatabase import Key, MDB, Character, KeyCharacter
 from threading import Thread, Lock
 from wow import Specialization
-from time import time
+from time import time, sleep
 
 lock = Lock()
 
@@ -15,16 +15,13 @@ def get_search_bar(page: ft.Page):
         v = page.views[-1]
         name = e.value
         while (len(page.views) != 0) and (v == page.views[-1]):
-            if name != e.value:
+            if name != e.value and len(e.value) >= 3:
                 name = e.value
                 chars = []
                 if len(name) != 0:
-                    chars = MDB.get_character_by_name(name[0]).get()
+                    chars = MDB.get_character_by_name(name).get()
                 e.controls[0].controls = [ft.ListTile(title=ft.Text(i.name), data = i.guid, on_click = go_char_page) for i in chars]
                 e.controls[0].update()
-            else:
-                from time import sleep
-                sleep(0.1)
         lock.release()
 
     def start_listen(e: ft.ControlEvent):
@@ -186,6 +183,7 @@ def get_keys_table(offset: int, column: list[str], reverse: list[bool]):
         alert.open = False
         e.page.update()
         e.page.views[-1].controls = tmp
+        sleep(0.1)
         e.page.views[-1].update()
     size = MDB.size()
     if offset in keys_cahce:
@@ -201,12 +199,12 @@ def get_keys_table(offset: int, column: list[str], reverse: list[bool]):
         keys_cahce[offset] = g
     headers = get_table_headers()
     exp1 = (offset == 0)
-    exp2 = (size.get() - offset - 10 <= 0)
+    exp2 = (size - offset - 10 <= 0)
     btns = (
         (ft.icons.KEYBOARD_DOUBLE_ARROW_LEFT, exp1, 0),
         (ft.icons.CHEVRON_LEFT, exp1, offset - 10),
         (ft.icons.CHEVRON_RIGHT, exp2, offset + 10),
-        (ft.icons.KEYBOARD_DOUBLE_ARROW_RIGHT, exp2, size.get()-10)
+        (ft.icons.KEYBOARD_DOUBLE_ARROW_RIGHT, exp2, size-10)
     )
     btns = [ft.IconButton(icon = icon, bgcolor=ft.colors.PRIMARY_CONTAINER, icon_color=ft.colors.ON_PRIMARY_CONTAINER, disabled=dis, data=offset, on_click=click) for icon, dis, offset in btns]
     
