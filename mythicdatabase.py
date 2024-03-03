@@ -112,12 +112,18 @@ class AsyncMythicDataBase:
                 except Empty:
                     continue
                 else:
-                    with sq.connect('data.db') as conn:
-                        req(conn)
-                    queue.task_done()
+                    while True:
+                        try:
+                            with sq.connect('data.db') as conn:
+                                req(conn)
+                            queue.task_done()
+                        except Exception as er:
+                            print(er)
+                            continue
+                        break
         self.queue = Queue()
         Thread(target = handler, args = (self.queue,), daemon = True).start()
-        Thread(target = handler, args = (self.queue,), daemon = True).start()
+        #Thread(target = handler, args = (self.queue,), daemon = True).start()
         with sq.connect('data.db') as conn:
             try:
                 self._size = conn.execute(f'SELECT COUNT(*) FROM {self.MYTHIC.name}').fetchone()[0]
@@ -258,38 +264,61 @@ class AsyncMythicDataBase:
         return res
 
     def count_score(self):
-        def handler(char: Character):
-            import wow
-            res = self.exe(
-                Where(
-                    Select(self.MYTHIC_GUID, [KeyCharacter.SPEC_ID, KeyCharacter.INST, KeyCharacter.SCORE, KeyCharacter.AFFIXES]),
-                    [KeyCharacter.GUID],
-                    [char.guid]
-                )
-            ).get()
-            wow.count_score(char, res)
-            self.exe(
-                Where(
-                    Update(
-                        self.CHARACTERS,
-                        [Character.SCORE, Character.TANK_SCORE, Character.HEAL_SCORE, Character.DPS_SCORE],
-                        [char.score, char.tank_score, char.heal_score, char.dps_score]
-                    ),
-                    [Character.GUID],
-                    [char.guid]
-                )
-            )
-
-        with ThreadPoolExecutor(3) as exe:
-            offset = 0
-            limit = 10
+        import wow
+        #with ThreadPoolExecutor(1) as exe:
+        offset = 0
+        limit = 10
+        t = time()
+        k = 1
+        with sq.connect('data.db') as conn:
             while True:
-                chars = self.get_characters(offset, limit).get()
+                r = conn.execute(
+                    Order(
+                        Select(self.CHARACTERS, [], True),
+                        [Character.NAME],
+                        [False]
+                    ).get() + f''' LIMIT {offset}, {limit}'''
+                )
+                chars = []
+                for i in r.fetchall():
+                    char = Character()
+                    char.guid = int(i[0])
+                    char.name = i[1]
+                    char.keys = i[2]
+                    char.score = int(i[3])
+                    char.tank_score = int(i[4])
+                    char.heal_score = int(i[5])
+                    char.dps_score = int(i[6])
+                    chars.append(char)
+                offset+=limit
                 if not chars:
                     break
-                offset += limit
                 for char in chars:
-                    exe.submit(handler, char)
+                    res = conn.execute(
+                        Where(
+                            Select(self.MYTHIC_GUID, [KeyCharacter.SPEC_ID, KeyCharacter.INST, KeyCharacter.SCORE, KeyCharacter.AFFIXES]),
+                            [KeyCharacter.GUID],
+                            [char.guid]
+                        ).get()
+                    ).fetchall()
+                    wow.count_score(char, res)
+                    conn.execute(
+                        Where(
+                            Update(
+                                self.CHARACTERS,
+                                [Character.SCORE, Character.TANK_SCORE, Character.HEAL_SCORE, Character.DPS_SCORE],
+                                [char.score, char.tank_score, char.heal_score, char.dps_score]
+                            ),
+                            [Character.GUID],
+                            [char.guid]
+                        ).get()
+                    )
+                if offset // 100 == k:
+                    conn.commit()
+                    k+=1
+                    print(offset, time()-t)
+                    t = time()
+                
 
     def get_character_by_name(self, name: str) -> list[Character]:
         '''SELECT character whose nickname start with name'''
@@ -446,5 +475,5 @@ MDB = AsyncMythicDataBase()
 if __name__ == '__main__':
     print('MAIN():', MDB)
     #MDB.count_score()
-    #MDB.flush().get()
+    MDB.flush().get()
     
