@@ -6,10 +6,10 @@ import datetime
 
 json_data = [
     {
-        'tid': 13,
+        'tid': 15,
         'data': [
             {
-                'page': 0,
+                'page': 1,
                 'start': 0,
                 'limit': 25,
                 'sort': [
@@ -38,7 +38,6 @@ def get_page():
             exit(0)
         if json_data[0]['data'][0]['page'] % 100 == 0:
             print(json_data[0]['data'][0]['page'], time()-t)
-            MDB.flush()
             t = time()
         json_data[0]['data'][0]['page'] += 1
         json_data[0]['data'][0]['start'] += 25
@@ -80,20 +79,19 @@ def parse():
                 MDB.add_key(key)
         except Exception as e:
             print("parse_exception: ", e)
-            #print(js)
             break
             exit(0)
 
 
-def get_all_keys():
+def get_all_keys(ses: requests.Session):
     ses.get(url='https://cpsl.wowcircle.me')
     ses.post(url='https://cpsl.wowcircle.me/main.php?1&serverId=null', data='[{"tid":4,"data":[{"accountName":"'+login+'","password":"'+password+'","captcha":""}],"action":"wow_Services","type":"rpc","method":"cmdLogin"}]')
     MDB.create().get()
     parse()
-    MDB.flush().get()
-
 
 if __name__ == '__main__':
     ses = requests.session()
-    get_all_keys()
+    get_all_keys(ses)
     ses.close()
+    from time import sleep
+    sleep(7)
