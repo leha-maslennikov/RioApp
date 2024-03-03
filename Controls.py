@@ -245,3 +245,45 @@ def get_keys_table(offset: int, column: list[str], reverse: list[bool]):
         )
     ]
     return controls
+
+def get_char_header(char: Character):
+    title = ft.Row(
+        [
+            ft.Icon(ft.icons.ACCOUNT_CIRCLE, scale=4),
+            ft.Column(
+                [
+                    ft.Text(char.name, size=17, color=ft.colors.ON_PRIMARY_CONTAINER),
+                    ft.Text('Guild')
+                ]
+            )
+
+        ]
+    )
+    head = ft.Row(
+        [
+            title,
+        ],
+        alignment=ft.MainAxisAlignment.SPACE_AROUND
+    )
+    for score, name in [(char.score, BEST), (char.tank_score, TANK[:-1]), (char.heal_score, HEAL[:-1]), (char.dps_score, DD)]:
+        if score > 0:
+            head.controls.append(
+                ft.Container(
+                    ft.Column(
+                        [
+                            ft.Text(str(score), size = 17, color=ft.colors.ON_TERTIARY),
+                            ft.Text(name, size = 15, color=ft.colors.ON_TERTIARY)
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                    ),
+                    bgcolor=ft.colors.TERTIARY,
+                    border_radius=10,
+                    padding=10
+                )
+            )
+    return ft.Container(
+        head,
+        bgcolor=ft.colors.PRIMARY_CONTAINER,
+        padding=10,
+        border_radius=10
+    )

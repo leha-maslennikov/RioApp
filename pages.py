@@ -24,7 +24,7 @@ def character_page(page: ft.Page, guid: int):
    return ft.View(
       route = f'/{CHARACTER_PAGE}/{guid}',
       appbar=get_menu_bar(page),
-      controls = [],
+      controls = [get_char_header(MDB.get_character_by_guid(guid).get())],
       bgcolor = ft.colors.PRIMARY
    )
 
