@@ -87,6 +87,7 @@ class Character:
         return str
 class AsyncMythicDataBase:
     queue: Queue
+    name: str
     MYTHIC = Table('mythic')
     MYTHIC_GUID = Table('mythic_guid')
     CHARACTERS = Table('characters')
@@ -104,7 +105,7 @@ class AsyncMythicDataBase:
                 pass
             return self.result
 
-    def __init__(self) -> None:
+    def __init__(self, name: str, number_of_threads: int) -> None:
         def handler(queue: Queue):
             while True:
                 try:
@@ -114,7 +115,7 @@ class AsyncMythicDataBase:
                 else:
                     while True:
                         try:
-                            with sq.connect('data.db') as conn:
+                            with sq.connect(self.name) as conn:
                                 req(conn)
                             queue.task_done()
                         except Exception as er:
@@ -122,9 +123,10 @@ class AsyncMythicDataBase:
                             continue
                         break
         self.queue = Queue()
-        Thread(target = handler, args = (self.queue,), daemon = True).start()
-        #Thread(target = handler, args = (self.queue,), daemon = True).start()
-        with sq.connect('data.db') as conn:
+        self.name = name
+        for i in range(number_of_threads):
+            Thread(target = handler, args = (self.queue,), daemon = True).start()
+        with sq.connect(self.name) as conn:
             try:
                 self._size = conn.execute(f'SELECT COUNT(*) FROM {self.MYTHIC.name}').fetchone()[0]
             except:
@@ -270,7 +272,7 @@ class AsyncMythicDataBase:
         limit = 10
         t = time()
         k = 1
-        with sq.connect('data.db') as conn:
+        with sq.connect(self.name) as conn:
             while True:
                 r = conn.execute(
                     Order(
@@ -470,7 +472,7 @@ class AsyncMythicDataBase:
     def size(self) -> int:
         return self._size
 
-MDB = AsyncMythicDataBase()
+MDB = AsyncMythicDataBase('data.db', 2)
 
 if __name__ == '__main__':
     print('MAIN():', MDB)
