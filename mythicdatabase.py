@@ -140,7 +140,7 @@ class AsyncMythicDataBase:
         self.queue.put(f)
         return res
 
-    def create(self) -> None:
+    def create(self) -> Result:
         '''DROP IF EXIST AND CREATE mythic, characters, mythic_guid
         Affixes ChallengeLevel Date RecordTime TimerLevel
         guid name specID CovenantID SoulbindID'''
