@@ -473,6 +473,7 @@ class AsyncMythicDataBase:
         return self._size
 
 MDB = AsyncMythicDataBase('data.db', 2)
+LastSeason = AsyncMythicDataBase('last_season_data.db', 1)
 
 if __name__ == '__main__':
     print('MAIN():', MDB)

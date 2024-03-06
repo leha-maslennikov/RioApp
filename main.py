@@ -2,6 +2,7 @@ import flet as ft
 import pages
 import Controls
 
+
 def main(page: ft.Page):
     page.theme = ft.Theme(color_scheme_seed='blue', font_family='Verdana')
     #page.window_center()

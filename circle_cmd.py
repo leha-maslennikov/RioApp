@@ -1,12 +1,13 @@
 import requests
-from mythicdatabase import MDB, Key, KeyCharacter
+from mythicdatabase import Key, KeyCharacter, AsyncMythicDataBase
 from secret import login, password
 import wow
 import datetime
+from time import sleep, time
 
 json_data = [
     {
-        'tid': 15,
+        'tid': 12,
         'data': [
             {
                 'page': 1,
@@ -28,7 +29,6 @@ json_data = [
 ]
 
 def get_page():
-    from time import time
     t = time()
     while True:
         response = ses.post('https://cpsl.wowcircle.me/main.php?1&serverId=null', json=json_data)
@@ -41,7 +41,9 @@ def get_page():
             t = time()
         json_data[0]['data'][0]['page'] += 1
         json_data[0]['data'][0]['start'] += 25
+        #json_data[0]['tid']+=1
         try:
+            #print(json_data[0]['data'][0]['page'])
             yield response.json()
         except Exception as e:
             print('get_page_2: ', e)
@@ -79,6 +81,7 @@ def parse():
                 MDB.add_key(key)
         except Exception as e:
             print("parse_exception: ", e)
+            print('end of list')
             break
             exit(0)
 
@@ -90,8 +93,12 @@ def get_all_keys(ses: requests.Session):
     parse()
 
 if __name__ == '__main__':
+    MDB = AsyncMythicDataBase('data.db', 1)
     ses = requests.session()
     get_all_keys(ses)
     ses.close()
-    from time import sleep
-    sleep(7)
+    print('----------1')
+    MDB.flush().get()
+    print('----------2')
+    MDB.count_score()
+    print('----------3')

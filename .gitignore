@@ -1,4 +1,5 @@
 .venv
 data.db
+last_season_data.db
 secret.py
 __pycache__/

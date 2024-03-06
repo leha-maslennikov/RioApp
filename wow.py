@@ -55,7 +55,7 @@ specialization = {
 
 colors = {
     'Priest' : ft.colors.WHITE,
-    'Warrior' : ft.colors.BROWN,
+    'Warrior' : ft.colors.BROWN_400,
     'Shaman' : ft.colors.BLUE,
     'Death Knight' : ft.colors.RED,
     'Paladin' : ft.colors.PINK_200,
@@ -63,7 +63,7 @@ colors = {
     'Warlock' : ft.colors.PURPLE_200,
     'Monk' : ft.colors.GREEN_ACCENT,
     'Rogue' : ft.colors.YELLOW,
-    'Hunter' : ft.colors.GREEN,
+    'Hunter' : ft.colors.GREEN_200,
     'Mage' : ft.colors.LIGHT_BLUE_200,
     'Druid' : ft.colors.ORANGE
 }

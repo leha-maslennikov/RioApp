@@ -1,6 +1,6 @@
 import flet as ft
 from Text import *
-from mythicdatabase import Key, MDB, Character, KeyCharacter
+from mythicdatabase import Key, MDB, Character, KeyCharacter, LastSeason
 from threading import Thread, Lock
 from wow import Specialization
 from time import time, sleep
@@ -125,13 +125,13 @@ def get_affix_img(src: str) -> ft.Image:
 
 def get_key_row(key: Key):
     row = ft.Row()
-    size = [65, 140, 70, 90, 100, 80, 120, 60, 100]
+    size = [65, 70, 140, 70, 90, 140]
     char = key.characters
     affixes = ft.Row(
         [get_affix_img(i) for i in key.affixes.split()],
         spacing=0
     )
-    key = [key.id, key.inst, f'{key.challenge_level}{key.timer_level*"+"}', key.record_time]
+    key = [key.id, key.score, key.inst, f'{key.challenge_level}{key.timer_level*"+"}', key.record_time]
     for i in range(len(key)):
         row.controls.append(
             ft.Container(
@@ -150,7 +150,13 @@ def get_key_row(key: Key):
             )
         )
     for i in char.get():
-        row.controls.append(get_char_block(i))
+        row.controls.append(
+            ft.Container(
+                content=get_char_block(i),
+                #alignment=ft.alignment.ce,
+                padding=10
+            )
+        )
     return ft.ExpansionPanel(
                 header=row,
                 bgcolor=ft.colors.SECONDARY
@@ -158,8 +164,8 @@ def get_key_row(key: Key):
 
 def get_table_headers():
     row = ft.Row()
-    size = [65, 140, 70, 90, 140, 80, 120, 60, 100]
-    headers = 'Rank	Dungeon	Level	Time	Affixes	Tank	Healer	DPS	Score'.split()
+    size = [65, 70, 140, 90, 70, 140]
+    headers = 'Rank Score Dungeon	Level	Time	Affixes'.split()
     for i in range(len(headers)):
         row.controls.append(
             ft.Container(
@@ -246,7 +252,39 @@ def get_keys_table(offset: int, column: list[str], reverse: list[bool]):
     ]
     return controls
 
-def get_char_header(char: Character):
+def get_char_score_row(char: Character) -> ft.Container:
+    score_row = ft.Row(
+        [],
+        alignment=ft.MainAxisAlignment.SPACE_AROUND
+    )
+    for score, name in [(char.score, BEST), (char.tank_score, TANK[:-1]), (char.heal_score, HEAL[:-1]), (char.dps_score, DD)]:
+        if score > 0:
+            score_row.controls.append(
+                ft.Container(
+                    ft.Column(
+                        [
+                            ft.Text(str(score), size = 17, 
+                                    #color=ft.colors.ON_TERTIARY
+                                    ),
+                            ft.Text(name, size = 15, 
+                                    #color=ft.colors.ON_TERTIARY
+                                    )
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                    ),
+                    #bgcolor=ft.colors.TERTIARY,
+                    border_radius=10,
+                    padding=10
+                )
+            )
+    return ft.Container(
+        score_row,
+        bgcolor=ft.colors.PRIMARY_CONTAINER,
+        padding=10,
+        border_radius=10
+    )
+
+def get_char_header(char: Character) -> ft.Container:
     title = ft.Row(
         [
             ft.Icon(ft.icons.ACCOUNT_CIRCLE, scale=4),
@@ -259,31 +297,38 @@ def get_char_header(char: Character):
 
         ]
     )
-    head = ft.Row(
-        [
-            title,
-        ],
-        alignment=ft.MainAxisAlignment.SPACE_AROUND
+
+    tmp = get_char_score_row(char)
+    tmp.content.controls = [title] + tmp.content.controls
+
+    return tmp
+
+def get_char_keys_table(c_keys: list[Key]):
+    headers = get_table_headers()
+    keys = ft.ExpansionPanelList(
+        expand_icon_color=ft.colors.ON_SECONDARY,
+        divider_color=ft.colors.PRIMARY_CONTAINER,
+        controls=[]
     )
-    for score, name in [(char.score, BEST), (char.tank_score, TANK[:-1]), (char.heal_score, HEAL[:-1]), (char.dps_score, DD)]:
-        if score > 0:
-            head.controls.append(
-                ft.Container(
-                    ft.Column(
-                        [
-                            ft.Text(str(score), size = 17, color=ft.colors.ON_TERTIARY),
-                            ft.Text(name, size = 15, color=ft.colors.ON_TERTIARY)
-                        ],
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER
-                    ),
-                    bgcolor=ft.colors.TERTIARY,
-                    border_radius=10,
-                    padding=10
+    for i in c_keys:
+        keys.controls.append(get_key_row(key=i.get()))
+
+    controls = ft.Container(
+        ft.Column(
+            [
+                headers,
+                ft.Column(
+                    [keys],
+                    expand=True,
+                    scroll=ft.ScrollMode.ALWAYS
                 )
-            )
-    return ft.Container(
-        head,
-        bgcolor=ft.colors.PRIMARY_CONTAINER,
-        padding=10,
-        border_radius=10
+            ]
+        ),
+        expand=True
     )
+    return ft.Container(
+            controls,
+            bgcolor=ft.colors.PRIMARY_CONTAINER,
+            border_radius=10,
+            expand=True
+        )
