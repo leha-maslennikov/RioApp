@@ -52,6 +52,7 @@ def get_page():
 
 
 def parse():
+    k = 1
     for js in get_page():
         try:
             for row_key in js['result']['data']:
@@ -94,6 +95,12 @@ def get_all_keys(ses: requests.Session):
 
 if __name__ == '__main__':
     MDB = AsyncMythicDataBase('data.db', 1)
+    def f():
+        while True:
+            print(MDB.queue.qsize())
+            sleep(5)
+    from threading import Thread
+    Thread(target=f, daemon=True).start()
     ses = requests.session()
     get_all_keys(ses)
     ses.close()
